@@ -8,6 +8,7 @@
     "allowSyntheticDefaultImports": true,
     "target": "es2017",
     "sourceMap": true,
+    "rootDir": "./lib",
     "outDir": "./dist",
     "baseUrl": "./",
     "incremental": true,
@@ -19,6 +20,6 @@
     "noFallthroughCasesInSwitch": false,
     "paths": {}
   },
-  "include": ["lib/**/*"],
-  "exclude": ["node_modules", "**/*.tests.ts"]
+  "include": ["lib"],
+  "exclude": ["node_modules", "dist", "**/*.tests.ts"]
 }

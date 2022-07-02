@@ -2,11 +2,12 @@
   "name": "@dbc-tech/nest-dapr",
   "version": "0.0.5",
   "description": "Develop NestJs microservices using Dapr pubsub subscriptions and bindings",
-  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "scripts": {
     "build": "rimraf -rf dist && tsc -p tsconfig.json",
     "lint": "eslint \"{lib,tests}/**/*.ts\" --fix",
-    "test": "npm run test"
+    "test": "npm run test",
+    "push:version": "git push --follow-tags"
   },
   "repository": {
     "type": "git",
@@ -42,6 +43,6 @@
     "registry": "https://registry.npmjs.org/"
   },
   "files": [
-    "dist/"
+    "dist"
   ]
 }
