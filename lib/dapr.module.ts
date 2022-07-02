@@ -39,14 +39,7 @@ export interface DaprModuleAsyncOptions
 
 @Module({})
 export class DaprModule {
-  static register({
-    serverHost,
-    serverPort,
-    daprHost,
-    daprPort,
-    communicationProtocol,
-    clientOptions,
-  }: DaprModuleOptions): DynamicModule {
+  static register(options?: DaprModuleOptions): DynamicModule {
     return {
       global: true,
       module: DaprModule,
@@ -55,12 +48,12 @@ export class DaprModule {
         {
           provide: DaprServer,
           useValue: new DaprServer(
-            serverHost,
-            serverPort,
-            daprHost ? daprHost : null,
-            daprPort ? daprPort : null,
-            communicationProtocol,
-            clientOptions,
+            options?.serverHost,
+            options?.serverPort,
+            options?.daprHost ? options.daprHost : null,
+            options?.daprPort ? options.daprPort : null,
+            options?.communicationProtocol,
+            options?.clientOptions,
           ),
         },
         {
