@@ -36,5 +36,9 @@
   },
   "dependencies": {
     "@dapr/dapr": "^2.3.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   }
 }
