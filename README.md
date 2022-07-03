@@ -1,8 +1,8 @@
-Develop NestJs microservices using [Dapr](https://dapr.io/) pubsub and bindings
+Develop NestJs microservices using [Dapr](https://dapr.io/) pubsub and bindings.
 
 # Description
 
-Dapr Module for [Nest](https://github.com/nestjs/nest) built on top of the [Dapr JS SDK](https://github.com/dapr/js-sdk)
+Dapr Module for [Nest](https://github.com/nestjs/nest) built on top of the [Dapr JS SDK](https://github.com/dapr/js-sdk).
 
 # Installation
 
@@ -12,7 +12,7 @@ npm i --save @dbc-tech/nest-dapr
 
 # Requirements
 
-Install [Dapr](https://dapr.io/) as per getting started [guide](https://docs.dapr.io/getting-started/). Ensure Dapr is running with:
+Install [Dapr](https://dapr.io/) as per getting started [guide](https://docs.dapr.io/getting-started/). Ensure Dapr is running with
 
 ```bash
 dapr --version
@@ -27,9 +27,9 @@ Runtime version: 1.7.4
 
 # Quick start
 
-The following scaffolds a [Nest](https://github.com/nestjs/nest) project with the Nest-Dapr Module and demonstrates using Nest with Dapr using [RabbitMQ](https://www.rabbitmq.com/) pubsub & queue bindings.
+The following scaffolds a [Nest](https://github.com/nestjs/nest) project with the [nest-dapr](https://www.npmjs.com/package/@dbc-tech/nest-dapr) package and demonstrates using Nest with Dapr using [RabbitMQ](https://www.rabbitmq.com/) pubsub & queue bindings.
 
-Install Nest [CLI](https://docs.nestjs.com/cli/overview):
+Install Nest [CLI](https://docs.nestjs.com/cli/overview)
 
 ```bash
 npm install -g @nestjs/cli
@@ -42,7 +42,7 @@ nest new nest-dapr
 cd nest-dapr/
 ```
 
-Install [nest-dapr](https://www.npmjs.com/package/@dbc-tech/nest-dapr)
+Install [nest-dapr](https://www.npmjs.com/package/@dbc-tech/nest-dapr) package
 
 ```bash
 npm i --save @dbc-tech/nest-dapr
@@ -80,7 +80,7 @@ export class AppController {
 }
 ```
 
-Create pubsub & topic names used for pubsub operations and message interface.
+Create pubsub & topic names used for pubsub operations and message interface
 
 ```typescript
 const pubSubName = 'my-pubsub';
@@ -113,7 +113,7 @@ pubSubHandler(message: Message): void {
 }
 ```
 
-Create Dapr [pubsub](https://docs.dapr.io/developing-applications/building-blocks/pubsub/) component in `components` folder:
+Create Dapr [pubsub](https://docs.dapr.io/developing-applications/building-blocks/pubsub/) component in `components` folder
 
 ```yaml
 apiVersion: dapr.io/v1alpha1
@@ -128,7 +128,7 @@ spec:
   - name: host
     value: amqp://guest:guest@localhost:5674
 ```
-Save file as `components/rabbitmq-pubsub.yaml`.
+Save file as `components/rabbitmq-pubsub.yaml`
 
 Create `docker-compose.yml` in the project root used to run [RabbitMQ](https://www.rabbitmq.com/)
 
@@ -169,7 +169,7 @@ Invoke endpoint to publish the message
 curl -X POST localhost:3000/pubsub
 ```
 
-This should publish a message to RabbitMQ which should be consumed by the handler and written to the console
+This should publish a message to RabbitMQ which should be consumed by the handler and written to the console:
 
 ```
 == APP == Received topic:my-topic message: { hello: 'world' }
