@@ -1,6 +1,7 @@
 import { DaprServer } from '@dapr/dapr';
 import {
   Injectable,
+  Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
 } from '@nestjs/common';
@@ -12,6 +13,8 @@ import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 export class DaprLoader
   implements OnApplicationBootstrap, OnApplicationShutdown
 {
+  private readonly logger = new Logger(DaprLoader.name);
+
   constructor(
     private readonly discoveryService: DiscoveryService,
     private readonly daprServer: DaprServer,
@@ -21,15 +24,15 @@ export class DaprLoader
 
   async onApplicationBootstrap() {
     this.loadDaprHandlers();
-    console.log('Starting Dapr server');
+    this.logger.log('Starting Dapr server');
     await this.daprServer.start();
-    console.log('Dapr server started');
+    this.logger.log('Dapr server started');
   }
 
   async onApplicationShutdown() {
-    console.log('Stopping Dapr server');
+    this.logger.log('Stopping Dapr server');
     await this.daprServer.stop();
-    console.log('Dapr server stopped');
+    this.logger.log('Dapr server stopped');
   }
 
   loadDaprHandlers() {
@@ -71,7 +74,7 @@ export class DaprLoader
     }
     const { name, topicName } = daprPubSubMetadata;
 
-    console.log(`Subscribing to Dapr: ${name}, Topic: ${topicName}`);
+    this.logger.log(`Subscribing to Dapr: ${name}, Topic: ${topicName}`);
     await this.daprServer.pubsub.subscribe(
       name,
       topicName,
@@ -94,7 +97,7 @@ export class DaprLoader
     }
     const { name } = daprBindingMetadata;
 
-    console.log(`Registering Dapr binding: ${name}`);
+    this.logger.log(`Registering Dapr binding: ${name}`);
     await this.daprServer.binding.receive(name, async (data: any) => {
       instance[methodKey].call(instance, data);
     });
