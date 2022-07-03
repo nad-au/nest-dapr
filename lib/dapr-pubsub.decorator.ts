@@ -14,6 +14,11 @@ export interface DaprPubSubMetadata {
    * Topic name to subscribe.
    */
   topicName: string;
+
+  /**
+   * Route to use.
+   */
+  route?: string;
 }
 
 /**
@@ -23,5 +28,13 @@ export interface DaprPubSubMetadata {
  * @param name name of pubsub component
  * @param topicName topic name to subscribe
  */
-export const DaprPubSub = (name: string, topicName: string): MethodDecorator =>
-  SetMetadata(DAPR_PUBSUB_METADATA, { name, topicName } as DaprPubSubMetadata);
+export const DaprPubSub = (
+  name: string,
+  topicName: string,
+  route?: string,
+): MethodDecorator =>
+  SetMetadata(DAPR_PUBSUB_METADATA, {
+    name,
+    topicName,
+    route,
+  } as DaprPubSubMetadata);

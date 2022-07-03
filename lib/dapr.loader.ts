@@ -72,15 +72,20 @@ export class DaprLoader
     if (!daprPubSubMetadata) {
       return;
     }
-    const { name, topicName } = daprPubSubMetadata;
+    const { name, topicName, route } = daprPubSubMetadata;
 
-    this.logger.log(`Subscribing to Dapr: ${name}, Topic: ${topicName}`);
+    this.logger.log(
+      `Subscribing to Dapr: ${name}, Topic: ${topicName}${
+        route ? ' on route ' + route : ''
+      }`,
+    );
     await this.daprServer.pubsub.subscribe(
       name,
       topicName,
       async (data: any) => {
         instance[methodKey].call(instance, data);
       },
+      route,
     );
   }
 
