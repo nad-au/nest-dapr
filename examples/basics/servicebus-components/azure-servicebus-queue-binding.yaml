@@ -1,0 +1,17 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: my-queue-binding
+  namespace: default
+spec:
+  type: bindings.azure.servicebusqueues
+  version: v1
+  metadata:
+    - name: connectionString
+      secretKeyRef:
+        name: asbNsConnstring
+        key: asbNsConnstring
+    - name: queueName
+      value: request-payment
+auth:
+  secretStore: localsecretstore

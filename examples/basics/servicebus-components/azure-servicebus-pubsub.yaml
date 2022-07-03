@@ -1,0 +1,15 @@
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: my-pubsub
+  namespace: default
+spec:
+  type: pubsub.azure.servicebus
+  version: v1
+  metadata:
+    - name: connectionString
+      secretKeyRef:
+        name: asbNsConnstring
+        key: asbNsConnstring
+auth:
+  secretStore: localsecretstore
