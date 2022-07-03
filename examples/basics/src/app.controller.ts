@@ -15,9 +15,9 @@ interface Message {
 export class AppController {
   constructor(
     private readonly appService: AppService,
-    readonly client: DaprClient,
+    readonly daprClient: DaprClient,
   ) {
-    console.log(`Dapr Client running on ${client.daprPort}`);
+    console.log(`Dapr Client running on ${daprClient.daprPort}`);
   }
 
   @Get()
@@ -29,7 +29,7 @@ export class AppController {
   async pubsub(): Promise<boolean> {
     const message: Message = { hello: 'world' };
 
-    return this.client.pubsub.publish(pubSubName, topicName, message);
+    return this.daprClient.pubsub.publish(pubSubName, topicName, message);
   }
 
   @DaprPubSub(pubSubName, topicName)
@@ -42,7 +42,7 @@ export class AppController {
     const bindingOperation = 'create';
     const message: Message = { hello: 'world' };
 
-    return this.client.binding.send(bindingName, bindingOperation, message);
+    return this.daprClient.binding.send(bindingName, bindingOperation, message);
   }
 
   @DaprBinding(bindingName)
