@@ -22,7 +22,7 @@
     "start:dapr": "dapr run --app-id basics --app-protocol http --app-port 50001 --dapr-http-port 50000 --components-path ./rabbitmq-components npm run start"
   },
   "dependencies": {
-    "@dbc-tech/nest-dapr": "^0.0.10",
+    "@dbc-tech/nest-dapr": "^0.0.11",
     "@nestjs/common": "^8.0.0",
     "@nestjs/core": "^8.0.0",
     "@nestjs/platform-express": "^8.0.0",
