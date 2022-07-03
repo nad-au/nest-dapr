@@ -215,3 +215,196 @@ export class AppController {
   }
 }
 ```
+
+# DaprModule
+
+`DaprModule` is a global Nest [Module](https://docs.nestjs.com/modules) used to register `DaprServer` & `DaprClient` as [providers](https://docs.nestjs.com/providers) within your project. It also registers all your handlers which listen to Dapr pubsub and input bindings so that when messages are received by Dapr, they are forwarded to the handler. Handler registration occurs during the `onApplicationBootstrap` lifecycle hook.
+
+To use `nest-dapr`, import the `DaprModule` into the root `AppModule` and run the `register()` static method.
+
+```typescript
+@Module({
+  imports: [DaprModule.register()],
+  controllers: [AppController],
+  providers: [AppService],
+})
+export class AppModule {}
+```
+
+`register()` takes an optional `DaprModuleOptions` object which allows passing arguments to `DaprServer` instance.
+
+```typescript
+export interface DaprModuleOptions {
+  serverHost?: string;
+  serverPort?: string;
+  daprHost?: string;
+  daprPort?: string;
+  communicationProtocol?: CommunicationProtocolEnum;
+  clientOptions?: DaprClientOptions;
+}
+```
+
+See Dapr JS [docs](https://docs.dapr.io/developing-applications/sdks/js/js-server/) for more information about these arguments.
+
+## Async configuration
+
+You can pass your options asynchronously instead of statically. In this case, use the `registerAsync()` method, which provides several ways to deal with async configuration. One of which is to use a factory function:
+
+```typescript
+DaprModule.registerAsync({
+  imports: [ConfigModule],
+  useFactory: (configService: ConfigService) => ({
+    serverHost: configService.get('DAPR_SERVER_HOST'),
+    serverPort: configService.get('DAPR_SERVER_PORT'),
+    daprHost: configService.get('DAPR_HOST'),
+    daprPort: configService.get('DAPR_PORT'),
+    communicationProtocol: CommunicationProtocolEnum.GRPC,
+    clientOptions: {
+      logger: {
+        level: LogLevel.Verbose,
+      },
+    },
+  }),
+  inject: [ConfigService],
+})
+```
+
+# DaprServer & DaprClient providers
+
+`DaprModule` registers [DaprServer](https://docs.dapr.io/developing-applications/sdks/js/js-server/) and [DaprClient](https://docs.dapr.io/developing-applications/sdks/js/js-client/) as Nest [providers](https://docs.nestjs.com/providers). These can be injected into your controllers and services like any other provider.
+
+```typescript
+import { DaprClient } from '@dapr/dapr';
+import { Controller, Post } from '@nestjs/common';
+
+@Controller()
+export class AppController {
+  constructor(readonly daprClient: DaprClient) {}
+
+  @Post()
+  async pubsub(): Promise<boolean> {
+    return this.daprClient.pubsub.publish('my-pub-sub', 'my-topic', {
+      hello: 'world',
+    });
+  }
+}
+```
+
+# Dapr decorators
+
+`nest-dapr` provides two TypeScript [decorators](https://www.typescriptlang.org/docs/handbook/decorators.html#decorators) which are used to declaratively configure subscriptions and bindings. These are used by `DaprModule` in conjunction with the handler method to define the handler implementations.
+
+## DaprPubSub decorator
+
+`DaprPubSub` decorator is used to set-up a handler for receiving pubsub topic messages. The handler has 3 arguments (`name`, `topicName` & `route`). `name` specifies the pubsub component `name` as defined in the Dapr component `metadata` section. `topicName` is the name of the pubsub topic. Route is an optional argument and defines possible [routing](https://docs.dapr.io/developing-applications/building-blocks/pubsub/howto-route-messages/) values.
+
+Example:
+
+```typescript
+@DaprPubSub('my-pubsub', 'my-topic')
+pubSubHandler(message: any): void {
+  console.log('Received message:', message);
+}
+```
+
+RabbitMQ pubsub Component:
+
+```yaml
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: my-pubsub
+  namespace: default
+spec:
+  type: pubsub.rabbitmq
+  version: v1
+  metadata:
+  - name: host
+    value: amqp://guest:guest@localhost:5674
+```
+
+Publish message:
+
+```typescript
+await this.daprClient.pubsub.publish('my-pubsub', 'my-topic', { hello: 'world' });
+```
+
+In this example the handler `pubSubHandler` method will receive messages from the `my-topic` topic through the `my-pubsub` component which in this case is RabbitMQ.
+
+## DaprBinding decorator
+
+`DaprBinding` decorator is used to set-up a handler for receiving input binding data. The handler has one argument `name` which specifies the binding component `name` as defined in the Dapr component `metadata` section.
+
+Example:
+
+```typescript
+@DaprBinding('my-queue-binding')
+bindingHandler(message: any): void {
+  coneole.log('Received message:', message);
+}
+```
+
+RabbitMQ binding component:
+
+```yaml
+apiVersion: dapr.io/v1alpha1
+kind: Component
+metadata:
+  name: my-queue-binding
+  namespace: default
+spec:
+  type: bindings.rabbitmq
+  version: v1
+  metadata:
+  - name: queueName
+    value: queue1
+  - name: host
+    value: amqp://guest:guest@localhost:5674
+  - name: durable
+    value: true
+  - name: deleteWhenUnused
+    value: false
+  - name: ttlInSeconds
+    value: 60
+  - name: prefetchCount
+    value: 0
+  - name: exclusive
+    value: false
+  - name: maxPriority
+    value: 5
+  - name: contentType
+    value: "text/plain"
+```
+
+Send message:
+
+```typescript
+await this.daprClient.binding.send('my-queue-binding', 'create', { hello: 'world' });
+```
+
+In this example the handler `bindingHandler` method will receive messages from the `queue1` queue defined in the `my-queue-binding` component which in this case is RabbitMQ.
+
+## Writing handlers
+
+`DaprModule` uses reflection to register all handlers found either in [Controller](https://docs.nestjs.com/controllers) or [Provider](https://docs.nestjs.com/providers) classes. These classes must be registered in a Nest [module](https://docs.nestjs.com/modules). Providers must be decorated with the `@Injectable()` decorator at the class level. Once this is done and your provider is added to your module's [providers] array then `nest-dapr` will use Nest dependency injection container to resolve the provider instance and call your handler when the message is received.
+
+Here's an example of a [Provider](https://docs.nestjs.com/providers) containing a Dapr handler.
+
+```typescript
+import { DaprPubSub } from '@dbc-tech/nest-dapr';
+import { Injectable, Logger } from '@nestjs/common';
+
+@Injectable()
+export class AppService {
+  private readonly logger = new Logger(AppService.name);
+
+  @DaprPubSub('my-pubsub', 'my-topic')
+  pubSubHandler(message: any): void {
+    this.logger.log(`Received topic message:`, message);
+  }
+}
+```
+
+# Troubleshooting
+
+[Dapr](https://dapr.io/) is a complex set of tools and services and must be set-up and deployed carefully to ensure your system operates correctly. `nest-dapr` is merely [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar) over the existing Dapr [js-sdk](https://github.com/dapr/js-sdk). If things are not working out for you please review Dapr & SDK documentation and issues. Also please use one of the examples provided in this repo. They are updated and tested regularly and should work out of the box. If you find that both Dapr and the Javascript SDK is both working fine but `nest-dapr` is not working in some way, please file an issue and state clearly the problem and provide a reproducable code example. Filing an issue with something like: "It doesn't work" is likely to be ignored. Thank you.
