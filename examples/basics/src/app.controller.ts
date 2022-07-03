@@ -1,6 +1,6 @@
 import { DaprClient } from '@dapr/dapr';
 import { DaprBinding, DaprPubSub } from '@dbc-tech/nest-dapr';
-import { Controller, Get, Post } from '@nestjs/common';
+import { Controller, Get, Logger, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 
 const pubSubName = 'my-pubsub';
@@ -13,11 +13,13 @@ interface Message {
 
 @Controller()
 export class AppController {
+  private readonly logger = new Logger(AppController.name);
+
   constructor(
     private readonly appService: AppService,
     readonly daprClient: DaprClient,
   ) {
-    console.log(`Dapr Client running on ${daprClient.daprPort}`);
+    this.logger.log(`Dapr Client running on ${daprClient.daprPort}`);
   }
 
   @Get()
@@ -34,7 +36,7 @@ export class AppController {
 
   @DaprPubSub(pubSubName, topicName)
   pubSubHandler(message: Message): void {
-    console.log(`Received topic:${topicName} message:`, message);
+    this.logger.log(`Received topic:${topicName} message:`, message);
   }
 
   @Post('binding')
@@ -47,6 +49,6 @@ export class AppController {
 
   @DaprBinding(bindingName)
   bindingHandler(message: Message): void {
-    console.log(`Received binding ${bindingName} message:`, message);
+    this.logger.log(`Received binding ${bindingName} message:`, message);
   }
 }
