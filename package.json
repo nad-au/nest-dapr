@@ -1,6 +1,6 @@
 {
   "name": "@dbc-tech/nest-dapr",
-  "version": "0.0.10",
+  "version": "0.0.11",
   "description": "Develop NestJs microservices using Dapr pubsub and bindings",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
