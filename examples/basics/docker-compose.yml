@@ -1,6 +1,6 @@
 version: '3.9'
 services:
-  pubsub:
+  rmq-basics:
     image: rabbitmq:3-management-alpine
     ports:
       - 5674:5672
