@@ -405,6 +405,19 @@ export class AppService {
 }
 ```
 
+# Examples
+
+| Example | Description |
+|---|---|
+| [Basics](examples/basics/README.md) | Demonstrates pubsub & input binding using RabbitMQ |
+
 # Troubleshooting
 
 [Dapr](https://dapr.io/) is a complex set of tools and services and must be set-up and deployed carefully to ensure your system operates correctly. `nest-dapr` is merely [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar) over the existing Dapr [js-sdk](https://github.com/dapr/js-sdk). If things are not working out for you please review Dapr & SDK documentation and issues. Also please use one of the examples provided in this repo. They are updated and tested regularly and should work out of the box. If you find that both Dapr and the Javascript SDK is both working fine but `nest-dapr` is not working in some way, please file an issue and state clearly the problem and provide a reproducable code example. Filing an issue with something like: "It doesn't work" is likely to be ignored. Thank you.
+
+# Credits
+
+Inspiration for this project is taken from [dapr-nestjs-pubsub](https://github.com/avifatal/dapr-nestjs-pubsub) which I believe is the first attempt at integrating [Dapr](https://dapr.io/) with [Nest](https://github.com/nestjs/nest). Unfortunately this repo supports only pubsub messaging and I wanted to support input bindings as well. In the end I adopted the patterns established in Nest's own [event-emitter](https://github.com/nestjs/event-emitter) repo and I pretty much *borrowed* all the metadata, reflection & decorator utils from there.
+
+So full credit goes to the [Nest](https://github.com/nestjs/nest) development team :heart:
+
