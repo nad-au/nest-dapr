@@ -83,7 +83,7 @@ export class DaprLoader
       name,
       topicName,
       async (data: any) => {
-        instance[methodKey].call(instance, data);
+        await instance[methodKey].call(instance, data);
       },
       route,
     );
@@ -104,7 +104,7 @@ export class DaprLoader
 
     this.logger.log(`Registering Dapr binding: ${name}`);
     await this.daprServer.binding.receive(name, async (data: any) => {
-      instance[methodKey].call(instance, data);
+      await instance[methodKey].call(instance, data);
     });
   }
 }
