@@ -16,8 +16,6 @@ export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 export interface DaprModuleOptions {
   serverHost?: string;
   serverPort?: string;
-  daprHost?: string;
-  daprPort?: string;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
 }
@@ -47,14 +45,12 @@ export class DaprModule {
       providers: [
         {
           provide: DaprServer,
-          useValue: new DaprServer(
-            options?.serverHost,
-            options?.serverPort,
-            options?.daprHost ? options.daprHost : null,
-            options?.daprPort ? options.daprPort : null,
-            options?.communicationProtocol,
-            options?.clientOptions,
-          ),
+          useValue: new DaprServer({
+            serverHost: options.serverHost,
+            serverPort: options.serverPort,
+            clientOptions: options.clientOptions,
+            communicationProtocol: options.communicationProtocol,
+          }),
         },
         {
           provide: DaprClient,
@@ -80,19 +76,15 @@ export class DaprModule {
           useFactory: ({
             serverHost,
             serverPort,
-            daprHost,
-            daprPort,
             communicationProtocol,
             clientOptions,
           }: DaprModuleOptions) =>
-            new DaprServer(
+            new DaprServer({
               serverHost,
               serverPort,
-              daprHost ? daprHost : null,
-              daprPort ? daprPort : null,
-              communicationProtocol,
               clientOptions,
-            ),
+              communicationProtocol,
+            }),
           inject: [DAPR_MODULE_OPTIONS_TOKEN],
         },
         {
