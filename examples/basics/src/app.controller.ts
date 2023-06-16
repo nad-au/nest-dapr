@@ -19,7 +19,7 @@ export class AppController {
     private readonly appService: AppService,
     readonly daprClient: DaprClient,
   ) {
-    this.logger.log(`Dapr Client running on ${daprClient.daprPort}`);
+    this.logger.log(`Dapr Client running on ${daprClient.options.daprPort}`);
   }
 
   @Get()
@@ -28,7 +28,7 @@ export class AppController {
   }
 
   @Post('pubsub')
-  async pubsub(): Promise<boolean> {
+  async pubsub() {
     const message: Message = { hello: 'world' };
 
     return this.daprClient.pubsub.publish(pubSubName, topicName, message);

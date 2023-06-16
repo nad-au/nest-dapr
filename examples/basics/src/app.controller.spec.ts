@@ -6,15 +6,18 @@ import { AppService } from './app.service';
 
 describe('AppController', () => {
   let appController: AppController;
-  let daprMock: DeepMocked<DaprClient> = createMock<DaprClient>();
+  const daprMock: DeepMocked<DaprClient> = createMock<DaprClient>();
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
-      providers: [AppService, {
-        provide: DaprClient,
-        useValue: daprMock
-      }],
+      providers: [
+        AppService,
+        {
+          provide: DaprClient,
+          useValue: daprMock,
+        },
+      ],
     }).compile();
 
     appController = app.get<AppController>(AppController);
