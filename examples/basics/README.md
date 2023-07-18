@@ -1,6 +1,6 @@
-# Basics: nest-dapr example
+# Basics: nest-dapr pubsub example
 
-Demonstrates pubsub & input bindings using RabbitMQ.
+Demonstrates pubsub using Redis.
 
 ## Getting Started
 
@@ -10,16 +10,10 @@ Install packages
 npm i
 ```
 
-Start docker-compose to launch RabbitMQ container
+Start docker-compose to app & dapr
 
 ```bash
-docker-compose up
-```
-
-Launch app with Dapr sidecar
-
-```bash
-npm run start:dapr
+docker compose up
 ```
 
 ## pubsub test
@@ -32,12 +26,8 @@ curl -X POST localhost:3000/pubsub
 
 Observe handler received message
 
-## Input binding test
+## Resiliency
 
-Invoke endpoint to send output binding message
+Un-comment the `BadRequestException` throw to simulate handler failure
 
-```bash
-curl -X POST localhost:3000/binding
-```
-
-Observe handler received message
+Observe retries defined in the resilience policy

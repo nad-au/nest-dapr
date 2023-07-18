@@ -1,6 +1,6 @@
 import { DaprClient } from '@dapr/dapr';
 import { DaprPubSub } from '@dbc-tech/nest-dapr';
-import { Controller, Logger, Post } from '@nestjs/common';
+import { BadRequestException, Controller, Logger, Post } from '@nestjs/common';
 import { Message } from './Message';
 
 @Controller()
@@ -13,13 +13,14 @@ export class PubsubController {
 
   @Post('pubsub')
   async pubsub() {
-    const message: Message = { hello: 'world' };
+    const message: Message = { hello: Date.now().toString(36) };
 
-    return this.daprClient.pubsub.publish('redis-pubsub', 'topic1', message);
+    return this.daprClient.pubsub.publish('redis-pubsub', 'myqueue', message);
   }
 
-  @DaprPubSub('redis-pubsub', 'topic1')
+  @DaprPubSub('redis-pubsub', 'myqueue')
   pubSubHandler(message: Message): void {
     this.logger.log(`Received topic message:`, message);
+    //throw new BadRequestException();
   }
 }
