@@ -79,19 +79,20 @@ export class DaprLoader
         route ? ' on route ' + route : ''
       }`,
     );
-    try {
-      await this.daprServer.pubsub.subscribe(
-        name,
-        topicName,
-        async (data: any) => {
+    await this.daprServer.pubsub.subscribe(
+      name,
+      topicName,
+      async (data: any) => {
+        try {
           await instance[methodKey].call(instance, data);
-        },
-        route,
-      );
-      return DaprPubSubStatusEnum.SUCCESS;
-    } catch (err) {
-      return DaprPubSubStatusEnum.RETRY;
-    }
+          return DaprPubSubStatusEnum.SUCCESS;
+        } catch (err) {
+          this.logger.debug('Retrying pubsub handler operation');
+          return DaprPubSubStatusEnum.RETRY;
+        }
+      },
+      route,
+    );
   }
 
   private async subscribeToDaprBindingEventIfListener(
