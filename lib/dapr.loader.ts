@@ -87,8 +87,13 @@ export class DaprLoader
           await instance[methodKey].call(instance, data);
           return DaprPubSubStatusEnum.SUCCESS;
         } catch (err) {
-          this.logger.debug('Retrying pubsub handler operation');
-          return onError ?? DaprPubSubStatusEnum.SUCCESS;
+          const response = onError ?? DaprPubSubStatusEnum.SUCCESS;
+          if (response == DaprPubSubStatusEnum.RETRY) {
+            this.logger.debug('Retrying pubsub handler operation');
+          } else if (response == DaprPubSubStatusEnum.DROP) {
+            this.logger.debug('Dropping message');
+          }
+          return response;
         }
       },
       route,
