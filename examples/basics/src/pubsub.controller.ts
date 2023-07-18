@@ -1,4 +1,4 @@
-import { DaprClient } from '@dapr/dapr';
+import { DaprClient, DaprPubSubStatusEnum } from '@dapr/dapr';
 import { DaprPubSub } from '@dbc-tech/nest-dapr';
 import { BadRequestException, Controller, Logger, Post } from '@nestjs/common';
 import { Message } from './Message';
@@ -18,9 +18,9 @@ export class PubsubController {
     return this.daprClient.pubsub.publish('redis-pubsub', 'myqueue', message);
   }
 
-  @DaprPubSub('redis-pubsub', 'myqueue')
+  @DaprPubSub('redis-pubsub', 'myqueue', undefined, DaprPubSubStatusEnum.RETRY)
   pubSubHandler(message: Message): void {
     this.logger.log(`Received topic message:`, message);
-    //throw new BadRequestException();
+    throw new BadRequestException();
   }
 }
