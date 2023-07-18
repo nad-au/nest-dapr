@@ -1,16 +1,16 @@
 import { DaprClient } from '@dapr/dapr';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { Test, TestingModule } from '@nestjs/testing';
-import { AppController } from './app.controller';
+import { PubsubController } from './pubsub.controller';
 import { AppService } from './app.service';
 
 describe('AppController', () => {
-  let appController: AppController;
+  let appController: PubsubController;
   const daprMock: DeepMocked<DaprClient> = createMock<DaprClient>();
 
   beforeEach(async () => {
     const app: TestingModule = await Test.createTestingModule({
-      controllers: [AppController],
+      controllers: [PubsubController],
       providers: [
         AppService,
         {
@@ -20,7 +20,7 @@ describe('AppController', () => {
       ],
     }).compile();
 
-    appController = app.get<AppController>(AppController);
+    appController = app.get<PubsubController>(PubsubController);
   });
 
   describe('root', () => {

@@ -1,7 +1,87 @@
-version: '3.9'
+version: '3.7'
+
 services:
-  rmq-basics:
-    image: rabbitmq:3-management-alpine
+  ############################
+  # Basics Handler
+  ############################
+  main:
+    container_name: basics-main
+    build:
+      dockerfile: ./Dockerfile
+    volumes:
+      - .:/usr/src/app
+    command:
+      [sh, -c, 'cd /usr/src/app && yarn start:debug']
     ports:
-      - 5674:5672
-      - 15674:15672
+      - 3000:3000
+      - 3500:3500
+      - 50002:50002
+      - 9229:9229
+    env_file:
+      - .env
+    environment:
+      PORT: ${PORT}
+      NODE_ENV: development
+    networks:
+      - webnet
+    depends_on:
+      - placement
+  ############################
+  # Dapr sidecar for Handler app
+  ############################
+  nodeapp-dapr:
+    container_name: basics-dapr-sidecar
+    image: 'daprio/daprd'
+    command:
+      [
+        './daprd',
+        '--app-id',
+        'nodeapp',
+        '--app-port',
+        '50002',
+        '--app-protocol',
+        'http',
+        '--placement-host-address',
+        'placement:50006',
+        '--components-path',
+        '/components',
+      ]
+    volumes:
+      - './components/:/components'
+    depends_on:
+      - main
+    network_mode: 'service:main'
+  ############################
+  # Dapr
+  ############################
+  placement:
+    container_name: basics-dapr
+    image: 'daprio/dapr'
+    command: ['./placement', '-port', '50006']
+    ports:
+      - 50006:50006
+    networks:
+      - webnet
+  ############################
+  # Redis state store
+  ############################
+  redis:
+    container_name: basics-redis
+    image: redis
+    ports:
+      - 6380:6379
+    networks:
+      - webnet
+  ############################
+  # Azurite Storage Emulator
+  ############################
+  azurite:
+    container_name: basics-storage
+    hostname: azurite
+    image: mcr.microsoft.com/azure-storage/azurite
+    networks:
+      - webnet
+    ports:
+      - 10000:10000
+networks:
+  webnet:
