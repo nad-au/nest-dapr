@@ -1,17 +1,24 @@
-import { DaprModule } from '@dbc-tech/nest-dapr';
 import { Module } from '@nestjs/common';
 import { PubsubController } from './pubsub.controller';
-import { CommunicationProtocolEnum } from '@dapr/dapr';
+import { DaprPubSubStatusEnum } from '@dapr/dapr';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { DaprModule } from '@dbc-tech/nest-dapr';
 
 @Module({
   imports: [
-    DaprModule.register({
-      serverPort: process.env.DAPR_SERVER_PORT,
-      clientOptions: {
-        daprPort: process.env.DAPR_PORT,
-        daprHost: 'localhost',
-        communicationProtocol: CommunicationProtocolEnum.HTTP,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      cache: true,
+    }),
+    DaprModule.registerAsync({
+      useFactory: (configService: ConfigService) => {
+        return {
+          serverPort: configService.get('DAPR_SERVER_PORT'),
+          onError: () => DaprPubSubStatusEnum.RETRY,
+        };
       },
+      imports: [],
+      inject: [ConfigService],
     }),
   ],
   controllers: [PubsubController],
