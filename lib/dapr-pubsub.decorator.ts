@@ -19,6 +19,11 @@ export interface DaprPubSubMetadata {
    * Route to use.
    */
   route?: string;
+
+  /**
+   * Status to return on unhandled exception.
+   */
+  onError?: DaprPubSubMetadata;
 }
 
 /**
@@ -32,9 +37,11 @@ export const DaprPubSub = (
   name: string,
   topicName: string,
   route?: string,
+  onError?: DaprPubSubMetadata,
 ): MethodDecorator =>
   SetMetadata(DAPR_PUBSUB_METADATA, {
     name,
     topicName,
     route,
+    onError,
   } as DaprPubSubMetadata);

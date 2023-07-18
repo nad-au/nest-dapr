@@ -72,7 +72,7 @@ export class DaprLoader
     if (!daprPubSubMetadata) {
       return;
     }
-    const { name, topicName, route } = daprPubSubMetadata;
+    const { name, topicName, route, onError } = daprPubSubMetadata;
 
     this.logger.log(
       `Subscribing to Dapr: ${name}, Topic: ${topicName}${
@@ -88,7 +88,7 @@ export class DaprLoader
           return DaprPubSubStatusEnum.SUCCESS;
         } catch (err) {
           this.logger.debug('Retrying pubsub handler operation');
-          return DaprPubSubStatusEnum.RETRY;
+          return onError ?? DaprPubSubStatusEnum.SUCCESS;
         }
       },
       route,
