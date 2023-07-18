@@ -1,4 +1,4 @@
-import { DaprServer } from '@dapr/dapr';
+import { DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
 import {
   Injectable,
   Logger,
@@ -79,14 +79,19 @@ export class DaprLoader
         route ? ' on route ' + route : ''
       }`,
     );
-    await this.daprServer.pubsub.subscribe(
-      name,
-      topicName,
-      async (data: any) => {
-        await instance[methodKey].call(instance, data);
-      },
-      route,
-    );
+    try {
+      await this.daprServer.pubsub.subscribe(
+        name,
+        topicName,
+        async (data: any) => {
+          await instance[methodKey].call(instance, data);
+        },
+        route,
+      );
+      return DaprPubSubStatusEnum.SUCCESS;
+    } catch (err) {
+      return DaprPubSubStatusEnum.RETRY;
+    }
   }
 
   private async subscribeToDaprBindingEventIfListener(
