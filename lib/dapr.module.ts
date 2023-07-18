@@ -1,4 +1,9 @@
-import { CommunicationProtocolEnum, DaprClient, DaprServer } from '@dapr/dapr';
+import {
+  CommunicationProtocolEnum,
+  DaprClient,
+  DaprPubSubStatusEnum,
+  DaprServer,
+} from '@dapr/dapr';
 import { DaprClientOptions } from '@dapr/dapr/types/DaprClientOptions';
 import {
   DynamicModule,
@@ -18,10 +23,19 @@ export interface DaprModuleOptions {
   serverPort?: string;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
+  onError?: (
+    name: string,
+    topicName: string,
+    error: any,
+  ) => DaprPubSubStatusEnum;
 }
 
 export interface DaprModuleOptionsFactory {
   createDaprModuleOptions(): Promise<DaprModuleOptions> | DaprModuleOptions;
+}
+
+export function createOptionsProvider(options: DaprModuleOptions): any {
+  return { provide: DAPR_MODULE_OPTIONS_TOKEN, useValue: options || {} };
 }
 
 export interface DaprModuleAsyncOptions
@@ -43,6 +57,7 @@ export class DaprModule {
       module: DaprModule,
       imports: [DiscoveryModule],
       providers: [
+        createOptionsProvider(options),
         {
           provide: DaprServer,
           useValue: new DaprServer({

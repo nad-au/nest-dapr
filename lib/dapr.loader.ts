@@ -1,5 +1,6 @@
 import { DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
 import {
+  Inject,
   Injectable,
   Logger,
   OnApplicationBootstrap,
@@ -8,6 +9,7 @@ import {
 import { DiscoveryService, MetadataScanner } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
+import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from './dapr.module';
 
 @Injectable()
 export class DaprLoader
@@ -20,6 +22,8 @@ export class DaprLoader
     private readonly daprServer: DaprServer,
     private readonly daprMetadataAccessor: DaprMetadataAccessor,
     private readonly metadataScanner: MetadataScanner,
+    @Inject(DAPR_MODULE_OPTIONS_TOKEN)
+    private readonly options: DaprModuleOptions,
   ) {}
 
   async onApplicationBootstrap() {
@@ -72,7 +76,7 @@ export class DaprLoader
     if (!daprPubSubMetadata) {
       return;
     }
-    const { name, topicName, route, onError } = daprPubSubMetadata;
+    const { name, topicName, route } = daprPubSubMetadata;
 
     this.logger.log(
       `Subscribing to Dapr: ${name}, Topic: ${topicName}${
@@ -85,16 +89,18 @@ export class DaprLoader
       async (data: any) => {
         try {
           await instance[methodKey].call(instance, data);
-          return DaprPubSubStatusEnum.SUCCESS;
         } catch (err) {
-          const response = onError ?? DaprPubSubStatusEnum.SUCCESS;
-          if (response == DaprPubSubStatusEnum.RETRY) {
-            this.logger.debug('Retrying pubsub handler operation');
-          } else if (response == DaprPubSubStatusEnum.DROP) {
-            this.logger.debug('Dropping message');
+          if (this.options.onError) {
+            const response = this.options.onError(name, topicName, err);
+            if (response == DaprPubSubStatusEnum.RETRY) {
+              this.logger.debug('Retrying pubsub handler operation');
+            } else if (response == DaprPubSubStatusEnum.DROP) {
+              this.logger.debug('Dropping message');
+            }
+            return response;
           }
-          return response;
         }
+        return DaprPubSubStatusEnum.SUCCESS;
       },
       route,
     );

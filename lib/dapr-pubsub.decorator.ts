@@ -1,4 +1,3 @@
-import { DaprPubSubStatusEnum } from '@dapr/dapr';
 import { SetMetadata } from '@nestjs/common';
 import { DAPR_PUBSUB_METADATA } from './constants';
 
@@ -20,11 +19,6 @@ export interface DaprPubSubMetadata {
    * Route to use.
    */
   route?: string;
-
-  /**
-   * Status to return on unhandled exception.
-   */
-  onError?: DaprPubSubStatusEnum;
 }
 
 /**
@@ -38,11 +32,9 @@ export const DaprPubSub = (
   name: string,
   topicName: string,
   route?: string,
-  onError?: DaprPubSubStatusEnum,
 ): MethodDecorator =>
   SetMetadata(DAPR_PUBSUB_METADATA, {
     name,
     topicName,
     route,
-    onError,
   } as DaprPubSubMetadata);
