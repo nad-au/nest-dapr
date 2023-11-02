@@ -12,7 +12,8 @@ import {
   Provider,
   Type,
 } from '@nestjs/common';
-import { DiscoveryModule } from '@nestjs/core';
+import { DiscoveryModule, Reflector } from '@nestjs/core';
+import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
 
@@ -21,6 +22,7 @@ export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 export interface DaprModuleOptions {
   serverHost?: string;
   serverPort?: string;
+  useNestHost?: boolean;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
   onError?: (
@@ -49,7 +51,10 @@ export interface DaprModuleAsyncOptions
   extraProviders?: Provider[];
 }
 
-@Module({})
+@Module({
+  providers: [DaprActorClient],
+  exports: [DaprActorClient],
+})
 export class DaprModule {
   static register(options?: DaprModuleOptions): DynamicModule {
     return {
@@ -74,6 +79,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        Reflector,
       ],
       exports: [DaprClient],
     };
@@ -109,6 +115,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        Reflector,
         ...(options.extraProviders || []),
       ],
       exports: [DaprClient],
