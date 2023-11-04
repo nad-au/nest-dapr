@@ -9,7 +9,6 @@ import { CounterController } from './counter.controller';
 @Module({
   imports: [
     DaprModule.register({
-      useNestHost: true,
       serverHost: '127.0.0.1',
       serverPort: process.env.PORT ?? '3001',
       communicationProtocol: CommunicationProtocolEnum.HTTP,
