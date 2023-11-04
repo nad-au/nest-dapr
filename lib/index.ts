@@ -1,3 +1,6 @@
+import { DaprActorClient } from './actors/dapr-actor-client.service';
+import { StatefulActorOf } from './actors/stateful-actor-of';
+import { StatefulActor } from './actors/stateful.actor';
 import { DAPR_BINDING_METADATA, DAPR_PUBSUB_METADATA } from './constants';
 import { DaprActor, DaprActorMetadata } from './dapr-actor.decorator';
 import { DaprBinding, DaprBindingMetadata } from './dapr-binding.decorator';
@@ -18,4 +21,7 @@ export {
   DaprActor,
   DaprLoader,
   DaprModule,
+  DaprActorClient,
+  StatefulActor,
+  StatefulActorOf,
 };
