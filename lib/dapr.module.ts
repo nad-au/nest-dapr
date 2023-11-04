@@ -22,7 +22,6 @@ export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 export interface DaprModuleOptions {
   serverHost?: string;
   serverPort?: string;
-  useNestHost?: boolean;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
   onError?: (
