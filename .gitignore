@@ -3,6 +3,7 @@
 
 # IDE
 /.vscode
+/.idea
 
 # misc
 npm-debug.log
