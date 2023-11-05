@@ -33,7 +33,7 @@ export class DaprLoader
   ) {}
 
   async onApplicationBootstrap() {
-    await patchActorManagerForNest(this.moduleRef);
+    patchActorManagerForNest(this.moduleRef);
     await this.daprServer.actor.init();
     this.loadDaprHandlers();
     this.logger.log('Starting Dapr server');
