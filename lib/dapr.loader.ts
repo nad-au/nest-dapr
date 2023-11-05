@@ -42,7 +42,7 @@ export class DaprLoader
 
     const resRegisteredActors =
       await this.daprServer.actor.getRegisteredActors();
-    console.log(`Registered Actors: ${JSON.stringify(resRegisteredActors)}`);
+    this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
   }
 
   async onApplicationShutdown() {
