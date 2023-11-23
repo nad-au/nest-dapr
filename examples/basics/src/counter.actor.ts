@@ -45,7 +45,7 @@ export class CounterActor
     const db = await this.mediator.execute(
       new ExternalCommand(this.getActorId().toString()),
     );
-    this.logInfo(`dbId: ${JSON.stringify(db)}`);
+    this.logInfo(`database: ${JSON.stringify(db)}`);
 
     // Call the global counter actor.
     await this.client
