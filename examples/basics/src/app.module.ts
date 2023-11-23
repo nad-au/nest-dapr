@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { PubsubController } from './pubsub.controller';
 import { CommunicationProtocolEnum, DaprPubSubStatusEnum } from '@dapr/dapr';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { DaprModule } from '@jeremycarter/nest-dapr';
+import { DaprModule } from '@rayondigital/nest-dapr';
 import { CounterController } from './counter.controller';
 import { CqrsModule } from '@nestjs/cqrs';
 import { CounterModule } from './counter/counter.module';

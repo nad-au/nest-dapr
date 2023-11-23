@@ -1,4 +1,4 @@
-import { DaprActor, StatefulActor } from '@jeremycarter/nest-dapr';
+import { DaprActor, StatefulActor } from '@rayondigital/nest-dapr';
 import { Logger } from '@nestjs/common';
 import { GlobalCounterActorInterface } from './global-counter.actor.interface';
 

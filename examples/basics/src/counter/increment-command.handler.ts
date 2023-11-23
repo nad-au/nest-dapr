@@ -1,6 +1,6 @@
 import { CommandHandler, EventBus, ICommandHandler } from '@nestjs/cqrs';
 import { IncrementCounterCommand } from './increment-counter.command';
-import { DaprActorClient } from '@jeremycarter/nest-dapr';
+import { DaprActorClient } from '@rayondigital/nest-dapr';
 import { CounterIncrementedEvent } from './counter-incremented.event';
 import { Logger } from '@nestjs/common';
 import { CounterActorInterface } from '../actors/counter.actor.interface';
