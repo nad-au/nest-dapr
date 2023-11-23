@@ -1,3 +1,5 @@
+[![npm version](https://badge.fury.io/js/@rayondigital%2Fnest-dapr.svg)](https://badge.fury.io/js/@rayondigital%2Fnest-dapr)
+
 # NestJS + Dapr
 Develop NestJs microservices using [Dapr](https://dapr.io/) pubsub, actors and bindings.
 
