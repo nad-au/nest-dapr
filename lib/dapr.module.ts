@@ -12,7 +12,8 @@ import {
   Provider,
   Type,
 } from '@nestjs/common';
-import { DiscoveryModule } from '@nestjs/core';
+import { DiscoveryModule, Reflector } from '@nestjs/core';
+import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
 
@@ -35,6 +36,19 @@ export interface DaprModuleOptionsFactory {
 }
 
 export function createOptionsProvider(options: DaprModuleOptions): any {
+  // Setup default options for actor clients if not provided.
+  // Reentrancy is enabled by default, with a max stack depth of 6 calls.
+  // See https://docs.dapr.io/developing-applications/building-blocks/actors/actors-runtime-config/
+  if (!options.clientOptions.actor) {
+    options.clientOptions.actor = {
+      reentrancy: {
+        enabled: true,
+        maxStackDepth: 6,
+      },
+      actorIdleTimeout: '15m',
+      actorScanInterval: '1m',
+    };
+  }
   return { provide: DAPR_MODULE_OPTIONS_TOKEN, useValue: options || {} };
 }
 
@@ -49,7 +63,10 @@ export interface DaprModuleAsyncOptions
   extraProviders?: Provider[];
 }
 
-@Module({})
+@Module({
+  providers: [DaprActorClient],
+  exports: [DaprActorClient],
+})
 export class DaprModule {
   static register(options?: DaprModuleOptions): DynamicModule {
     return {
@@ -74,6 +91,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        Reflector,
       ],
       exports: [DaprClient],
     };
@@ -109,6 +127,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        Reflector,
         ...(options.extraProviders || []),
       ],
       exports: [DaprClient],

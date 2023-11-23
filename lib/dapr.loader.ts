@@ -1,13 +1,23 @@
-import { DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
+import {
+  AbstractActor,
+  DaprInvokerCallbackContent,
+  DaprPubSubStatusEnum,
+  DaprServer,
+  HttpMethod,
+} from '@dapr/dapr';
+import Class from '@dapr/dapr/types/Class';
 import {
   Inject,
   Injectable,
   Logger,
   OnApplicationBootstrap,
   OnApplicationShutdown,
+  Type,
 } from '@nestjs/common';
-import { DiscoveryService, MetadataScanner } from '@nestjs/core';
+import { DiscoveryService, MetadataScanner, ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
+import { DaprActorClient } from './actors/dapr-actor-client.service';
+import { patchActorManagerForNest } from './actors/nest-actor-manager';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from './dapr.module';
 
@@ -19,18 +29,37 @@ export class DaprLoader
 
   constructor(
     private readonly discoveryService: DiscoveryService,
+    private readonly metadataScanner: MetadataScanner,
     private readonly daprServer: DaprServer,
     private readonly daprMetadataAccessor: DaprMetadataAccessor,
-    private readonly metadataScanner: MetadataScanner,
     @Inject(DAPR_MODULE_OPTIONS_TOKEN)
     private readonly options: DaprModuleOptions,
+    private readonly daprActorClient: DaprActorClient,
+    private readonly moduleRef: ModuleRef,
   ) {}
 
   async onApplicationBootstrap() {
+    patchActorManagerForNest(this.moduleRef);
+    await this.daprServer.actor.init();
+
     this.loadDaprHandlers();
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
+
+    this.daprServer.invoker.listen(
+      'test',
+      async (data: DaprInvokerCallbackContent) => {
+        console.log('data', data);
+        return { status: 200, data: { message: 'ok' } };
+      },
+      { method: HttpMethod.POST },
+    );
+
     this.logger.log('Dapr server started');
+
+    const resRegisteredActors =
+      await this.daprServer.actor.getRegisteredActors();
+    this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
   }
 
   async onApplicationShutdown() {
@@ -41,6 +70,20 @@ export class DaprLoader
 
   loadDaprHandlers() {
     const providers = this.discoveryService.getProviders();
+
+    // Find and register actors
+    providers
+      .filter(
+        (wrapper) =>
+          wrapper.isDependencyTreeStatic() &&
+          wrapper.metatype &&
+          this.daprMetadataAccessor.getDaprActorMetadata(wrapper.metatype),
+      )
+      .forEach(async (wrapper) => {
+        await this.registerActor(wrapper.metatype);
+      });
+
+    // Find and register pubsub and binding handlers
     const controllers = this.discoveryService.getControllers();
     [...providers, ...controllers]
       .filter((wrapper) => wrapper.isDependencyTreeStatic())
@@ -123,5 +166,43 @@ export class DaprLoader
     await this.daprServer.binding.receive(name, async (data: any) => {
       await instance[methodKey].call(instance, data);
     });
+  }
+
+  private async registerActor<T>(actorType: Type<T> | Function) {
+    if (!actorType) return;
+
+    const actorTypeName = actorType.name ?? actorType.constructor.name;
+
+    // We need to get the @DaprActor decorator metadata
+    const daprActorMetadata =
+      this.daprMetadataAccessor.getDaprActorMetadata(actorType);
+
+    const interfaceTypeName =
+      daprActorMetadata?.interfaceType?.name ??
+      daprActorMetadata?.interfaceType?.constructor.name;
+
+    this.logger.log(
+      `Registering Dapr Actor: ${actorTypeName} of type ${
+        interfaceTypeName ?? 'unknown'
+      }`,
+    );
+    await this.daprServer.actor.registerActor(
+      actorType as Class<AbstractActor>,
+    );
+    // Register the base actor type as a client
+    this.daprActorClient.register(
+      actorTypeName,
+      actorType,
+      this.daprServer.client,
+    );
+    // If an interface is provided, register the interface as a client
+    if (daprActorMetadata.interfaceType) {
+      this.daprActorClient.registerInterface(
+        actorType,
+        daprActorMetadata.interfaceType,
+        this.daprServer.client,
+      );
+    }
+    return actorTypeName;
   }
 }

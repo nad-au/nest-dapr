@@ -1,0 +1,10 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "noImplicitAny": false,
+    "inlineSourceMap": true,
+    "sourceMap": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["node_modules"]
+}
