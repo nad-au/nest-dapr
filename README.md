@@ -514,15 +514,15 @@ If you find that both Dapr and the Javascript SDK is both working fine but `nest
 please file an issue and state clearly the problem and provide a reproducible code example. 
 Filing an issue with something like: "It doesn't work" is likely to be ignored or removed.
 
-# Credits/Contributions
+# Credits/Contributions :heart:
 
 Thanks to:
 
 - [@dbc-tech/nest-dapr](https://github.com/nad-au/nest-dapr) - We forked from this repository
 - [nad-au](https://github.com/nad-au) - Worked on pubsub and initial integration
 - [dapr-nestjs-pubsub](https://github.com/avifatal/dapr-nestjs-pubsub) - The original library
-- [@dapr/dapr](https://github.com/dapr/js-sdk) - Development team :heart:
-- [Nest](https://github.com/nestjs/nest) - Development team :heart:
+- [@dapr/dapr](https://github.com/dapr/js-sdk) - Development team
+- [Nest](https://github.com/nestjs/nest) - Development team
 
 # Licence
 
