@@ -2,7 +2,7 @@ import {
   DaprActor,
   DaprActorClient,
   StatefulActor,
-} from '@jeremycarter/nest-dapr';
+} from '@rayondigital/nest-dapr';
 import { Inject, Logger } from '@nestjs/common';
 import { Mediator } from '../mediator/mediator.service';
 import { ExternalCommand } from '../counter/external-command';

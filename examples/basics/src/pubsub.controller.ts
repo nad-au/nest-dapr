@@ -1,7 +1,7 @@
 import { DaprClient } from '@dapr/dapr';
 import { Controller, Logger, Post } from '@nestjs/common';
 import { Message } from './message';
-import { DaprPubSub } from '@jeremycarter/nest-dapr';
+import { DaprPubSub } from '@rayondigital/nest-dapr';
 
 @Controller()
 export class PubsubController {
