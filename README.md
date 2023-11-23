@@ -143,6 +143,29 @@ export class CounterActor
 }
 ```
 
+### Actor Client
+
+This module provides the `DaprActorClient` which is a NestJS service.
+It can be injected into controllers, services, handlers and other actors.
+It acts as a proxy service to the actors, and allows you to call methods on the actors - similar to the Orleans GrainFactory.
+
+```typescript
+@Controller()
+export class CounterController {
+  constructor(
+    private readonly actorClient: DaprActorClient,
+  ) {}
+
+  @Get(":id")
+  async increment(@Param("id") id: string): Promise<string> {
+    const value = await this.actorClient
+      .getActor(CounterActorInterface, id)
+      .increment();
+    return `Counter incremented to ${value}`;
+  }
+}
+```
+
 ## PubSub
 
 Create pubsub & topic names used for pubsub operations and message interface
