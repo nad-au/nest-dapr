@@ -36,6 +36,19 @@ export interface DaprModuleOptionsFactory {
 }
 
 export function createOptionsProvider(options: DaprModuleOptions): any {
+  // Setup default options for actor clients if not provided.
+  // Reentrancy is enabled by default, with a max stack depth of 6 calls.
+  // See https://docs.dapr.io/developing-applications/building-blocks/actors/actors-runtime-config/
+  if (!options.clientOptions.actor) {
+    options.clientOptions.actor = {
+      reentrancy: {
+        enabled: true,
+        maxStackDepth: 6,
+      },
+      actorIdleTimeout: '15m',
+      actorScanInterval: '1m',
+    };
+  }
   return { provide: DAPR_MODULE_OPTIONS_TOKEN, useValue: options || {} };
 }
 

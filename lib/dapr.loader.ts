@@ -1,4 +1,10 @@
-import { AbstractActor, DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
+import {
+  AbstractActor,
+  DaprInvokerCallbackContent,
+  DaprPubSubStatusEnum,
+  DaprServer,
+  HttpMethod,
+} from '@dapr/dapr';
 import Class from '@dapr/dapr/types/Class';
 import {
   Inject,
@@ -35,9 +41,20 @@ export class DaprLoader
   async onApplicationBootstrap() {
     patchActorManagerForNest(this.moduleRef);
     await this.daprServer.actor.init();
+
     this.loadDaprHandlers();
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
+
+    this.daprServer.invoker.listen(
+      'test',
+      async (data: DaprInvokerCallbackContent) => {
+        console.log('data', data);
+        return { status: 200, data: { message: 'ok' } };
+      },
+      { method: HttpMethod.POST },
+    );
+
     this.logger.log('Dapr server started');
 
     const resRegisteredActors =

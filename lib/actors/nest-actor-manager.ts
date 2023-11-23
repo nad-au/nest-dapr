@@ -5,9 +5,21 @@ import { ContextIdFactory, ModuleRef } from '@nestjs/core';
 import { Injector } from '@nestjs/core/injector/injector';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 
-export function patchActorManagerForNest(moduleRef: ModuleRef) {
+export function patchActorManagerForNest(
+  moduleRef: ModuleRef,
+  invokeWrapperFn?: (
+    actorId: ActorId,
+    methodName: string,
+    data: any,
+    method: (actorId: ActorId, methodName: string, data: any) => Promise<any>,
+  ) => Promise<any>,
+) {
+  // The original create actor method
   const originalCreateActor = ActorManager.prototype.createActor;
+  // The original invoke actor method call
+  const originalCallActor = ActorManager.prototype.callActorMethod;
 
+  // We need replace/patch the original createActor method to resolve dependencies from the Nest Dependency Injection container
   ActorManager.prototype.createActor = async function (actorId: ActorId) {
     // Call the original createActor method
     const instance = await originalCreateActor.bind(this)(actorId);
@@ -19,9 +31,32 @@ export function patchActorManagerForNest(moduleRef: ModuleRef) {
       console.error(error);
       throw error;
     }
-
     return instance;
   };
+
+  // The parameter invokeWrapperFn is an optional async function the user can pass in which then acts as the
+  // wrapper for all callActorMethod calls.
+  if (invokeWrapperFn) {
+    // We need to replace/patch the original callActorMethod method to run inside the wrapper function so that the user
+    ActorManager.prototype.callActorMethod = async function (
+      actorId: ActorId,
+      methodName: string,
+      data: any,
+    ) {
+      return await invokeWrapperFn(
+        actorId,
+        methodName,
+        data,
+        originalCallActor.bind(this),
+      );
+    };
+  }
+}
+
+export interface ActorMethodInvocation {
+  actorId: ActorId;
+  method: string;
+  data: any;
 }
 
 async function resolveDependencies(
@@ -30,8 +65,7 @@ async function resolveDependencies(
 ): Promise<void> {
   const type = instance.constructor;
   try {
-    const injector = (moduleRef as any).injector as Injector;
-    const contextId = ContextIdFactory.create();
+    const injector = moduleRef['injector'];
     const wrapper = new InstanceWrapper({
       name: type && type.name,
       metatype: type,
