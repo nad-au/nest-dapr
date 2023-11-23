@@ -15,6 +15,7 @@ npm i
 Ensure Dapr Cli is installed. See https://docs.dapr.io/getting-started/install-dapr-cli/
 ```bash
 winget install Dapr.CLI
+# OR
 brew install dapr/tap/dapr-cli
 ```
 
@@ -40,6 +41,8 @@ The ports are:
 | Dapr Sidecar | 3500 |
 
 ```bash
+npm run start:dapr  
+# OR
 dapr run --app-id basics --app-protocol http --app-port 3001 --dapr-http-port 3500 npm run start
 ```
 
