@@ -4,11 +4,10 @@ import { CommunicationProtocolEnum, DaprPubSubStatusEnum } from '@dapr/dapr';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { DaprModule } from '@jeremycarter/nest-dapr';
 import { CounterController } from './counter.controller';
-import { CounterActor } from './counter.actor';
-import { GlobalCounterActor } from './global.counter.actor';
-import { Mediator } from './mediator.service';
 import { CqrsModule } from '@nestjs/cqrs';
 import { CounterModule } from './counter/counter.module';
+import { ActorModule } from './actors/actor.module';
+import { MediatorModule } from './mediator/mediator.module';
 
 @Module({
   imports: [
@@ -31,6 +30,14 @@ import { CounterModule } from './counter/counter.module';
             communicationProtocol:
               configService.get('DAPR_COMMUNICATION_PROTOCOL') ??
               CommunicationProtocolEnum.HTTP,
+            actor: {
+              reentrancy: {
+                enabled: true,
+                maxStackDepth: 6,
+              },
+              actorIdleTimeout: '1m',
+              actorScanInterval: '30s',
+            },
           },
           communicationProtocol:
             configService.get('DAPR_COMMUNICATION_PROTOCOL') ??
@@ -40,9 +47,10 @@ import { CounterModule } from './counter/counter.module';
       imports: [],
       inject: [ConfigService],
     }),
+    MediatorModule,
+    ActorModule,
     CounterModule,
   ],
-  providers: [Mediator, CounterActor, GlobalCounterActor],
   controllers: [PubsubController, CounterController],
 })
 export class AppModule {}

@@ -1,5 +1,5 @@
 import { Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { Mediator } from './mediator.service';
+import { Mediator } from './mediator/mediator.service';
 import { IncrementCounterCommand } from './counter/increment-counter.command';
 import { GetCounterValueQuery } from './counter/get-counter-value.query';
 

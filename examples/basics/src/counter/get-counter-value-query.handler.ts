@@ -1,8 +1,8 @@
 import { IQueryHandler, QueryHandler } from '@nestjs/cqrs';
 import { GetCounterValueQuery } from './get-counter-value.query';
 import { DaprActorClient } from '@jeremycarter/nest-dapr';
-import { CounterActorInterface } from '../counter.actor';
-import { GlobalCounterActorInterface } from '../global.counter.actor';
+import { CounterActorInterface } from '../actors/counter.actor';
+import { GlobalCounterActorInterface } from '../actors/global.counter.actor';
 
 @QueryHandler(GetCounterValueQuery)
 export class GetCounterValueQueryHandler
