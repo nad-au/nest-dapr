@@ -4,15 +4,11 @@ import {
   StatefulActor,
 } from '@jeremycarter/nest-dapr';
 import { Inject, Logger } from '@nestjs/common';
-import { GlobalCounterActorInterface } from './global.counter.actor';
 import { Mediator } from '../mediator/mediator.service';
 import { ExternalCommand } from '../counter/external-command';
 import { Temporal } from '@dapr/dapr';
-
-export abstract class CounterActorInterface {
-  abstract increment(): Promise<number>;
-  abstract getCounter(): Promise<number>;
-}
+import { CounterActorInterface } from './counter.actor.interface';
+import { GlobalCounterActorInterface } from './global-counter.actor.interface';
 
 @DaprActor({
   interfaceType: CounterActorInterface,

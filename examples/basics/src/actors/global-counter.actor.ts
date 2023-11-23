@@ -1,10 +1,6 @@
 import { DaprActor, StatefulActor } from '@jeremycarter/nest-dapr';
 import { Logger } from '@nestjs/common';
-
-export abstract class GlobalCounterActorInterface {
-  abstract increment(): Promise<void>;
-  abstract getCounter(): Promise<number>;
-}
+import { GlobalCounterActorInterface } from './global-counter.actor.interface';
 
 @DaprActor({
   interfaceType: GlobalCounterActorInterface,
@@ -23,11 +19,12 @@ export class GlobalCounterActor
     return super.onActivate();
   }
 
-  async increment(): Promise<void> {
+  async increment(): Promise<number> {
     this.counter++;
     this.logInfo(`incrementGlobal: ${this.counter}`);
     await this.setState('counter', this.counter);
     await this.saveState();
+    return this.counter;
   }
 
   async getCounter(): Promise<number> {
