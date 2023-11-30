@@ -21,6 +21,8 @@ spec:
     spec:
       containers:
         - name: nestjs-app
+          # From the Dockerfile
+          # eg docker build -t nest-dapr-example:latest .
           image: nest-dapr-example
           imagePullPolicy: IfNotPresent
           ports:

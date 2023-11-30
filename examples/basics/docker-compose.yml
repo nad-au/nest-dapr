@@ -2,10 +2,10 @@ version: '3.7'
 
 services:
   ############################
-  # Basics Server (NestJS)
+  # Basics App Server (NestJS)
   ############################
   main:
-    container_name: basics-api
+    container_name: basics-app
     build:
       dockerfile: ./Dockerfile
     volumes:
@@ -27,7 +27,7 @@ services:
     depends_on:
       - placement
   ############################
-  # Dapr sidecar for Handler app
+  # Dapr sidecar for Basics App
   ############################
   nodeapp-dapr:
     container_name: basics-dapr-sidecar
