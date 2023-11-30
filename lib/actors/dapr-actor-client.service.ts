@@ -6,6 +6,8 @@ import { Injectable, Type } from '@nestjs/common';
 export class DaprActorClient {
   // Keys are the actor type names in lower case and values are the actor client builders
   private actorClients: Map<string, ActorProxyBuilder<any>> = new Map();
+  // Keys are the actor type names in lower case and values are the actor types / interfaces
+  private interfaces: Map<string, Type<any> | Function> = new Map();
 
   constructor(private readonly daprClient: DaprClient) {}
 
@@ -14,6 +16,7 @@ export class DaprActorClient {
     actorType: Type<T> | Function,
     daprClient?: DaprClient,
   ): void {
+    this.interfaces.set(this.formatActorTypeName(actorTypeName), actorType);
     this.actorClients.set(
       this.formatActorTypeName(actorTypeName),
       new ActorProxyBuilder<T>(
@@ -30,6 +33,7 @@ export class DaprActorClient {
   ): void {
     const interfaceTypeName =
       interfaceType.name ?? interfaceType.constructor.name;
+    this.interfaces.set(this.formatActorTypeName(interfaceTypeName), actorType);
     this.actorClients.set(
       this.formatActorTypeName(interfaceTypeName),
       new ActorProxyBuilder<T>(
