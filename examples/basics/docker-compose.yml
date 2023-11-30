@@ -2,21 +2,21 @@ version: '3.7'
 
 services:
   ############################
-  # Basics Handler
+  # Basics Server (NestJS)
   ############################
   main:
-    container_name: basics-main
+    container_name: basics-api
     build:
       dockerfile: ./Dockerfile
     volumes:
       - .:/usr/src/app
     command:
-      [sh, -c, 'cd /usr/src/app && yarn start:debug']
+      [sh, -c, 'cd /usr/src/app && npm run start:prod']
     ports:
-      - 3000:3000
-      - 3500:3500
-      - 50002:50002
-      - 9229:9229
+      - 3000:3000 # NestJS
+      - 3001:3001 # Dapr Server (NodeJS)
+      - 9229:9229 # Debugging
+      - 3500:3500 # Sidecar
     env_file:
       - .env
     environment:
@@ -38,7 +38,7 @@ services:
         '--app-id',
         'nodeapp',
         '--app-port',
-        '50002',
+        '3001',
         '--app-protocol',
         'http',
         '--placement-host-address',
