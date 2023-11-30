@@ -21,6 +21,8 @@ spec:
     spec:
       containers:
         - name: nestjs-app
+          # From the Dockerfile
+          # eg docker build -t nest-dapr-example:latest .
           image: nest-dapr-example
           imagePullPolicy: IfNotPresent
           ports:
@@ -34,6 +36,7 @@ spec:
             - name: DAPR_COMMUNICATION_PROTOCOL
               value: "HTTP"
 ---
+# Expose the node app for testing
 apiVersion: v1
 kind: Service
 metadata:

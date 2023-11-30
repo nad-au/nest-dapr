@@ -34,11 +34,11 @@ docker compose up
 
 The ports are:
 
-| Service | Port |
-| --- | --- |
-| NestJS | 3000 |
-| Dapr | 3001 |
-| Dapr Sidecar | 3500 |
+| Service              | Port |
+|----------------------| --- |
+| NestJS               | 3000 |
+| Dapr (NodeJS) | 3001 |
+| Dapr Sidecar         | 3500 |
 
 ```bash
 npm run start:dapr  

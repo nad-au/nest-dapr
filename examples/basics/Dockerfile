@@ -19,6 +19,7 @@ RUN npm run build
 # Expose the port that the application listens on (3000 and 3001)
 EXPOSE 3000
 EXPOSE 3001
+EXPOSE 9229
 
 # Start the application
 CMD [ "npm", "start" ]
