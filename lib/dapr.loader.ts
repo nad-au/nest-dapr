@@ -39,6 +39,14 @@ export class DaprLoader
   ) {}
 
   async onApplicationBootstrap() {
+    // Setup the actor client
+    if (this.options.actorOptions) {
+      this.daprActorClient.setPrefix(
+        this.options.actorOptions?.prefix ?? '',
+        this.options.actorOptions?.delimiter ?? '-',
+      );
+    }
+
     patchActorManagerForNest(this.moduleRef);
     await this.daprServer.actor.init();
 

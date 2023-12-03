@@ -29,6 +29,10 @@ export interface DaprModuleOptions {
     topicName: string,
     error: any,
   ) => DaprPubSubStatusEnum;
+  actorOptions?: {
+    prefix?: string;
+    delimiter?: string;
+  };
 }
 
 export interface DaprModuleOptionsFactory {
