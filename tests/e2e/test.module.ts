@@ -22,6 +22,7 @@ import { CounterController } from './counter.controller';
       },
       actorOptions: {
         prefix: 'test',
+        typeNamePrefix: 'Test',
       },
     }),
   ],
