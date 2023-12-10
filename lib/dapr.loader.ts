@@ -196,8 +196,36 @@ export class DaprLoader
     // The option typeNamePrefix allows you to specify a prefix for the actor type name
     // For example CounterActor with prefix of 'Prod' would be ProdCounterActor
     // This is useful in scenarios where environments may share the same placement service
-    if (this.options.actorOptions.typeNamePrefix) {
+    if (this.options.actorOptions?.typeNamePrefix) {
       actorTypeName = this.options.actorOptions.typeNamePrefix + actorTypeName;
+      // Register using a custom actor manager
+      try {
+        const actorManager = ActorRuntime.getInstanceByDaprClient(
+          this.daprServer.client,
+        );
+        const managers = actorManager['actorManagers'] as Map<
+          string,
+          ActorManager<any>
+        >;
+        if (!managers.has(actorTypeName)) {
+          managers.set(
+            actorTypeName,
+            new ActorManager(
+              actorType as Class<AbstractActor>,
+              this.daprServer.client,
+            ),
+          );
+        }
+      } catch (err) {
+        await this.daprServer.actor.registerActor(
+          actorType as Class<AbstractActor>,
+        );
+      }
+    } else {
+      // Register as normal
+      await this.daprServer.actor.registerActor(
+        actorType as Class<AbstractActor>,
+      );
     }
 
     this.logger.log(
@@ -205,29 +233,6 @@ export class DaprLoader
         interfaceTypeName ?? 'unknown'
       }`,
     );
-
-    try {
-      const actorManager = ActorRuntime.getInstanceByDaprClient(
-        this.daprServer.client,
-      );
-      const managers = actorManager['actorManagers'] as Map<
-        string,
-        ActorManager<any>
-      >;
-      if (!managers.has(actorTypeName)) {
-        managers.set(
-          actorTypeName,
-          new ActorManager(
-            actorType as Class<AbstractActor>,
-            this.daprServer.client,
-          ),
-        );
-      }
-    } catch (err) {
-      await this.daprServer.actor.registerActor(
-        actorType as Class<AbstractActor>,
-      );
-    }
 
     // Register the base actor type as a client
     this.daprActorClient.register(
