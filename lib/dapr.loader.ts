@@ -41,18 +41,31 @@ export class DaprLoader
   ) {}
 
   async onApplicationBootstrap() {
+    if (this.options.disabled) {
+      this.logger.log('Dapr server is disabled');
+      return;
+    }
+
     patchActorManagerForNest(this.moduleRef, this.options.actorOptions);
     await this.daprServer.actor.init();
 
     this.loadDaprHandlers();
+
+    // If the dapr server port is 0, then we will assume that the server is not to be started
+    if (this.options.serverPort === '0') {
+      this.logger.log('Dapr server will not be started');
+      return;
+    }
+
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
-
     this.logger.log('Dapr server started');
 
     const resRegisteredActors =
       await this.daprServer.actor.getRegisteredActors();
-    this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+    if (resRegisteredActors.length > 0) {
+      this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+    }
 
     // Setup the actor client
     if (this.options.actorOptions) {
@@ -196,8 +209,36 @@ export class DaprLoader
     // The option typeNamePrefix allows you to specify a prefix for the actor type name
     // For example CounterActor with prefix of 'Prod' would be ProdCounterActor
     // This is useful in scenarios where environments may share the same placement service
-    if (this.options.actorOptions.typeNamePrefix) {
+    if (this.options.actorOptions?.typeNamePrefix) {
       actorTypeName = this.options.actorOptions.typeNamePrefix + actorTypeName;
+      // Register using a custom actor manager
+      try {
+        const actorManager = ActorRuntime.getInstanceByDaprClient(
+          this.daprServer.client,
+        );
+        const managers = actorManager['actorManagers'] as Map<
+          string,
+          ActorManager<any>
+        >;
+        if (!managers.has(actorTypeName)) {
+          managers.set(
+            actorTypeName,
+            new ActorManager(
+              actorType as Class<AbstractActor>,
+              this.daprServer.client,
+            ),
+          );
+        }
+      } catch (err) {
+        await this.daprServer.actor.registerActor(
+          actorType as Class<AbstractActor>,
+        );
+      }
+    } else {
+      // Register as normal
+      await this.daprServer.actor.registerActor(
+        actorType as Class<AbstractActor>,
+      );
     }
 
     this.logger.log(
@@ -205,29 +246,6 @@ export class DaprLoader
         interfaceTypeName ?? 'unknown'
       }`,
     );
-
-    try {
-      const actorManager = ActorRuntime.getInstanceByDaprClient(
-        this.daprServer.client,
-      );
-      const managers = actorManager['actorManagers'] as Map<
-        string,
-        ActorManager<any>
-      >;
-      if (!managers.has(actorTypeName)) {
-        managers.set(
-          actorTypeName,
-          new ActorManager(
-            actorType as Class<AbstractActor>,
-            this.daprServer.client,
-          ),
-        );
-      }
-    } catch (err) {
-      await this.daprServer.actor.registerActor(
-        actorType as Class<AbstractActor>,
-      );
-    }
 
     // Register the base actor type as a client
     this.daprActorClient.register(

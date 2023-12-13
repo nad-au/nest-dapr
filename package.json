@@ -1,6 +1,6 @@
 {
   "name": "@rayondigital/nest-dapr",
-  "version": "0.9.5",
+  "version": "0.9.8",
   "description": "Develop NestJs microservices using Dapr pubsub, actors and other bindings",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",

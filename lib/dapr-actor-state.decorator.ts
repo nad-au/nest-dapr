@@ -1,4 +1,4 @@
-import { DAPR_ACTOR_STATE } from './constants';
+import { DAPR_ACTOR_STATE_METADATA } from './constants';
 
 export interface StateProperty {
   key: string | symbol;
@@ -13,7 +13,7 @@ export function State(options?: {
 }): PropertyDecorator {
   return (target, propertyKey) => {
     const properties: StateProperty[] =
-      Reflect.getMetadata(DAPR_ACTOR_STATE, target.constructor) || [];
+      Reflect.getMetadata(DAPR_ACTOR_STATE_METADATA, target.constructor) || [];
     // Get the type of the property (might be useful for conversions later)
     const type = Reflect.getMetadata('design:type', target, propertyKey);
     properties.push({
@@ -22,6 +22,10 @@ export function State(options?: {
       type,
       defaultValue: options?.defaultValue,
     });
-    Reflect.defineMetadata(DAPR_ACTOR_STATE, properties, target.constructor);
+    Reflect.defineMetadata(
+      DAPR_ACTOR_STATE_METADATA,
+      properties,
+      target.constructor,
+    );
   };
 }
