@@ -5,6 +5,8 @@ import {
   DaprServer,
   HttpMethod,
 } from '@dapr/dapr';
+import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
+import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
 import Class from '@dapr/dapr/types/Class';
 import {
   Inject,
@@ -39,27 +41,37 @@ export class DaprLoader
   ) {}
 
   async onApplicationBootstrap() {
-    patchActorManagerForNest(this.moduleRef);
+    patchActorManagerForNest(this.moduleRef, this.options.actorOptions);
     await this.daprServer.actor.init();
 
     this.loadDaprHandlers();
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
 
-    this.daprServer.invoker.listen(
-      'test',
-      async (data: DaprInvokerCallbackContent) => {
-        console.log('data', data);
-        return { status: 200, data: { message: 'ok' } };
-      },
-      { method: HttpMethod.POST },
-    );
-
     this.logger.log('Dapr server started');
 
     const resRegisteredActors =
       await this.daprServer.actor.getRegisteredActors();
     this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+
+    // Setup the actor client
+    if (this.options.actorOptions) {
+      this.daprActorClient.setPrefix(
+        this.options.actorOptions?.prefix ?? '',
+        this.options.actorOptions?.delimiter ?? '-',
+      );
+      this.daprActorClient.setTypeNamePrefix(
+        this.options.actorOptions?.typeNamePrefix ?? '',
+      );
+
+      if (this.options.actorOptions?.prefix) {
+        this.logger.log(
+          `Actors will be prefixed with ${
+            this.options.actorOptions?.prefix ?? ''
+          } and delimited with ${this.options.actorOptions?.delimiter ?? '-'}`,
+        );
+      }
+    }
   }
 
   async onApplicationShutdown() {
@@ -171,7 +183,7 @@ export class DaprLoader
   private async registerActor<T>(actorType: Type<T> | Function) {
     if (!actorType) return;
 
-    const actorTypeName = actorType.name ?? actorType.constructor.name;
+    let actorTypeName = actorType.name ?? actorType.constructor.name;
 
     // We need to get the @DaprActor decorator metadata
     const daprActorMetadata =
@@ -181,14 +193,42 @@ export class DaprLoader
       daprActorMetadata?.interfaceType?.name ??
       daprActorMetadata?.interfaceType?.constructor.name;
 
+    // The option typeNamePrefix allows you to specify a prefix for the actor type name
+    // For example CounterActor with prefix of 'Prod' would be ProdCounterActor
+    // This is useful in scenarios where environments may share the same placement service
+    if (this.options.actorOptions.typeNamePrefix) {
+      actorTypeName = this.options.actorOptions.typeNamePrefix + actorTypeName;
+    }
+
     this.logger.log(
       `Registering Dapr Actor: ${actorTypeName} of type ${
         interfaceTypeName ?? 'unknown'
       }`,
     );
-    await this.daprServer.actor.registerActor(
-      actorType as Class<AbstractActor>,
-    );
+
+    try {
+      const actorManager = ActorRuntime.getInstanceByDaprClient(
+        this.daprServer.client,
+      );
+      const managers = actorManager['actorManagers'] as Map<
+        string,
+        ActorManager<any>
+      >;
+      if (!managers.has(actorTypeName)) {
+        managers.set(
+          actorTypeName,
+          new ActorManager(
+            actorType as Class<AbstractActor>,
+            this.daprServer.client,
+          ),
+        );
+      }
+    } catch (err) {
+      await this.daprServer.actor.registerActor(
+        actorType as Class<AbstractActor>,
+      );
+    }
+
     // Register the base actor type as a client
     this.daprActorClient.register(
       actorTypeName,

@@ -20,6 +20,10 @@ import { CounterController } from './counter.controller';
           level: LogLevel.Verbose,
         },
       },
+      actorOptions: {
+        prefix: 'test',
+        typeNamePrefix: 'Test',
+      },
     }),
   ],
   controllers: [CounterController],

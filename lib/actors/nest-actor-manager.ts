@@ -1,12 +1,13 @@
-import { ActorId } from '@dapr/dapr';
+import { AbstractActor, ActorId } from '@dapr/dapr';
 import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 import { Scope, Type } from '@nestjs/common';
-import { ContextIdFactory, ModuleRef } from '@nestjs/core';
-import { Injector } from '@nestjs/core/injector/injector';
+import { ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
+import { DaprModuleActorOptions } from '../dapr.module';
 
 export function patchActorManagerForNest(
   moduleRef: ModuleRef,
+  options: DaprModuleActorOptions,
   invokeWrapperFn?: (
     actorId: ActorId,
     methodName: string,
@@ -22,7 +23,16 @@ export function patchActorManagerForNest(
   // We need replace/patch the original createActor method to resolve dependencies from the Nest Dependency Injection container
   ActorManager.prototype.createActor = async function (actorId: ActorId) {
     // Call the original createActor method
-    const instance = await originalCreateActor.bind(this)(actorId);
+    const instance = (await originalCreateActor.bind(this)(
+      actorId,
+    )) as AbstractActor;
+    if (options?.typeNamePrefix) {
+      // This is where we override the Actor Type Name at runtime
+      // This means it may differ from the instance/ctor name.
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      instance['actorType'] = `${options.typeNamePrefix}${instance.actorType}`;
+    }
 
     // Attempt to resolve dependencies from the Nest Dependency Injection container
     try {

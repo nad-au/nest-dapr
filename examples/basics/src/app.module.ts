@@ -24,6 +24,11 @@ import { MediatorModule } from './mediator/mediator.module';
           serverPort: configService.get('DAPR_SERVER_PORT'),
           daprHost: configService.get('DAPR_HOST'),
           daprPort: configService.get('DAPR_PORT'),
+          actorOptions: {
+            prefix:
+              configService.get('NAMESPACE') ??
+              configService.get('DAPR_ACTOR_PREFIX'),
+          },
           clientOptions: {
             daprHost: configService.get('DAPR_HOST'),
             daprPort: configService.get('DAPR_PORT'),

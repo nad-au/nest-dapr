@@ -51,27 +51,31 @@ describe('DaprActorClient', () => {
         StatelessCounterActorInterface,
         'stateless-1',
       );
+      const initialValue = await actor.getCounter();
+      expect(initialValue).toBeDefined();
 
       await actor.increment();
       const firstValue = await actor.getCounter();
-      expect(firstValue).toBe(1);
+      expect(firstValue).toBe(initialValue + 1);
       await actor.increment();
       const secondValue = await actor.getCounter();
-      expect(secondValue).toBe(2);
+      expect(secondValue).toBe(initialValue + 2);
     });
 
     it('should call a stateful actor', async () => {
       const actor = daprActorClient.getActor(
         CounterActorInterface,
-        'stateless-1',
+        'stateful-1',
       );
+      const initialValue = await actor.getCounter();
+      expect(initialValue).toBeDefined();
 
       await actor.increment();
       const firstValue = await actor.getCounter();
-      expect(firstValue).toBe(1);
+      expect(firstValue).toBe(initialValue + 1);
       await actor.increment();
       const secondValue = await actor.getCounter();
-      expect(secondValue).toBe(2);
+      expect(secondValue).toBe(initialValue + 2);
     });
   });
 
