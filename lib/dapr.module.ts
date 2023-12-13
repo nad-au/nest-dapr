@@ -30,6 +30,7 @@ export interface DaprModuleOptions {
     error: any,
   ) => DaprPubSubStatusEnum;
   actorOptions?: DaprModuleActorOptions;
+  disabled?: boolean;
 }
 
 export interface DaprModuleActorOptions {

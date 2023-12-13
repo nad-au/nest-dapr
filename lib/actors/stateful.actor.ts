@@ -1,5 +1,5 @@
 import { AbstractActor } from '@dapr/dapr';
-import { DAPR_ACTOR_STATE } from '../constants';
+import { DAPR_ACTOR_STATE_METADATA } from '../constants';
 import { StateProperty } from '../dapr-actor-state.decorator';
 
 export class StatefulActor extends AbstractActor {
@@ -27,7 +27,7 @@ export class StatefulActor extends AbstractActor {
   async onActivate(): Promise<void> {
     this.stateProperties =
       (Reflect.getMetadata(
-        DAPR_ACTOR_STATE,
+        DAPR_ACTOR_STATE_METADATA,
         this.constructor,
       ) as StateProperty[]) || [];
     await super.onActivate();

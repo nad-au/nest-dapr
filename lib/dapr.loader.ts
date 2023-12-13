@@ -41,18 +41,31 @@ export class DaprLoader
   ) {}
 
   async onApplicationBootstrap() {
+    if (this.options.disabled) {
+      this.logger.log('Dapr server is disabled');
+      return;
+    }
+
     patchActorManagerForNest(this.moduleRef, this.options.actorOptions);
     await this.daprServer.actor.init();
 
     this.loadDaprHandlers();
+
+    // If the dapr server port is 0, then we will assume that the server is not to be started
+    if (this.options.serverPort === '0') {
+      this.logger.log('Dapr server will not be started');
+      return;
+    }
+
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
-
     this.logger.log('Dapr server started');
 
     const resRegisteredActors =
       await this.daprServer.actor.getRegisteredActors();
-    this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+    if (resRegisteredActors.length > 0) {
+      this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+    }
 
     // Setup the actor client
     if (this.options.actorOptions) {
