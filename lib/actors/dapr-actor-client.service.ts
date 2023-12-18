@@ -1,6 +1,7 @@
 import { ActorId, DaprClient } from '@dapr/dapr';
 import Class from '@dapr/dapr/types/Class';
 import { Injectable, Type } from '@nestjs/common';
+import { ModuleRef } from '@nestjs/core';
 import { ActorProxyBuilder } from './actor-proxy-builder';
 
 @Injectable()
@@ -15,7 +16,10 @@ export class DaprActorClient {
   private delimiter = '-';
   private typeNamePrefix = '';
 
-  constructor(private readonly daprClient: DaprClient) {}
+  constructor(
+    private readonly moduleRef: ModuleRef,
+    private readonly daprClient: DaprClient,
+  ) {}
 
   setPrefix(prefix: string, delimiter = '-'): void {
     this.prefix = prefix;
@@ -35,6 +39,7 @@ export class DaprActorClient {
     this.actorClients.set(
       this.formatActorTypeName(actorTypeName),
       new ActorProxyBuilder<T>(
+        this.moduleRef,
         actorType as Class<T>,
         daprClient ?? this.daprClient,
       ),
@@ -55,6 +60,7 @@ export class DaprActorClient {
     this.actorClients.set(
       this.formatActorTypeName(interfaceTypeName),
       new ActorProxyBuilder<T>(
+        this.moduleRef,
         actorType as Class<T>,
         daprClient ?? this.daprClient,
       ),

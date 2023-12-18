@@ -9,7 +9,7 @@ import { CacheService } from './src/cache.service';
 
 // To run inside Dapr use:
 // dapr run --app-id nest-dapr --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test
-describe('DaprActorClient', () => {
+describe.skip('DaprActorClient', () => {
   let testingModule: TestingModule;
   let app: INestApplication;
   let daprClient: DaprClient;

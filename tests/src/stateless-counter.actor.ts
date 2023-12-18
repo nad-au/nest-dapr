@@ -2,8 +2,8 @@ import { AbstractActor } from '@dapr/dapr';
 import { DaprActor } from '../../lib';
 
 export abstract class StatelessCounterActorInterface {
-  abstract increment(): Promise<void>;
-  abstract getCounter(): Promise<number>;
+  abstract increment(context?: any): Promise<void>;
+  abstract getCounter(context?: any): Promise<number>;
 }
 
 @DaprActor({
@@ -15,11 +15,13 @@ export class StatelessCounterActor
 {
   counter: number = 0;
 
-  async increment(): Promise<void> {
+  async increment(context?: any): Promise<void> {
+    console.log('context', context);
     this.counter++;
   }
 
-  async getCounter(): Promise<number> {
+  async getCounter(context?: any): Promise<number> {
+    console.log('context', context);
     return this.counter;
   }
 }

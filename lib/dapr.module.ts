@@ -14,6 +14,8 @@ import {
 } from '@nestjs/common';
 import { DiscoveryModule, Reflector } from '@nestjs/core';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
+import { NestActorManager } from './actors/nest-actor-manager';
+import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
 
@@ -31,12 +33,19 @@ export interface DaprModuleOptions {
   ) => DaprPubSubStatusEnum;
   actorOptions?: DaprModuleActorOptions;
   disabled?: boolean;
+  contextProvider?: DaprContextProvider;
 }
 
 export interface DaprModuleActorOptions {
   prefix?: string;
   delimiter?: string;
   typeNamePrefix?: string;
+}
+
+export enum DaprContextProvider {
+  None = 'none',
+  ALS = 'als',
+  NestCLS = 'nest-cls',
 }
 
 export interface DaprModuleOptionsFactory {
@@ -72,8 +81,8 @@ export interface DaprModuleAsyncOptions
 }
 
 @Module({
-  providers: [DaprActorClient],
-  exports: [DaprActorClient],
+  providers: [DaprActorClient, NestActorManager, DaprContextService],
+  exports: [DaprActorClient, DaprContextService],
 })
 export class DaprModule {
   static register(options?: DaprModuleOptions): DynamicModule {
@@ -99,6 +108,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        DaprContextService,
         Reflector,
       ],
       exports: [DaprClient],
@@ -135,6 +145,7 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        DaprContextService,
         Reflector,
         ...(options.extraProviders || []),
       ],

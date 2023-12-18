@@ -1,10 +1,4 @@
-import {
-  AbstractActor,
-  DaprInvokerCallbackContent,
-  DaprPubSubStatusEnum,
-  DaprServer,
-  HttpMethod,
-} from '@dapr/dapr';
+import { AbstractActor, DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
 import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
 import Class from '@dapr/dapr/types/Class';
@@ -19,9 +13,14 @@ import {
 import { DiscoveryService, MetadataScanner, ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
-import { patchActorManagerForNest } from './actors/nest-actor-manager';
+import { NestActorManager } from './actors/nest-actor-manager';
+import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
-import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from './dapr.module';
+import {
+  DAPR_MODULE_OPTIONS_TOKEN,
+  DaprContextProvider,
+  DaprModuleOptions,
+} from './dapr.module';
 
 @Injectable()
 export class DaprLoader
@@ -38,6 +37,8 @@ export class DaprLoader
     private readonly options: DaprModuleOptions,
     private readonly daprActorClient: DaprActorClient,
     private readonly moduleRef: ModuleRef,
+    private readonly contextService: DaprContextService,
+    private readonly actorManager: NestActorManager,
   ) {}
 
   async onApplicationBootstrap() {
@@ -46,7 +47,13 @@ export class DaprLoader
       return;
     }
 
-    patchActorManagerForNest(this.moduleRef, this.options.actorOptions);
+    // Hook into the Dapr Actor Manager
+    this.actorManager.setup(this.moduleRef, this.options.actorOptions);
+    // Setup CLS/ALS for async context propagation
+    if (this.options.contextProvider !== DaprContextProvider.None) {
+      this.actorManager.setupCSLWrapper(this.contextService);
+    }
+
     await this.daprServer.actor.init();
 
     this.loadDaprHandlers();
