@@ -10,6 +10,7 @@ import {
 import { State } from './dapr-actor-state.decorator';
 import { DaprActor, DaprActorMetadata } from './dapr-actor.decorator';
 import { DaprBinding, DaprBindingMetadata } from './dapr-binding.decorator';
+import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprPubSub, DaprPubSubMetadata } from './dapr-pubsub.decorator';
 import { DaprLoader } from './dapr.loader';
@@ -31,6 +32,7 @@ export {
   DaprLoader,
   DaprModule,
   DaprActorClient,
+  DaprContextService,
   StatefulActor,
   StatefulActorOf,
 };

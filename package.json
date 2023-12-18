@@ -1,6 +1,6 @@
 {
   "name": "@rayondigital/nest-dapr",
-  "version": "0.9.8",
+  "version": "0.9.9",
   "description": "Develop NestJs microservices using Dapr pubsub, actors and other bindings",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,8 @@
   "homepage": "https://github.com/rayondigital/nest-dapr#readme",
   "peerDependencies": {
     "@nestjs/common": "^10.0.0",
-    "@nestjs/core": "^10.0.0"
+    "@nestjs/core": "^10.0.0",
+    "nestjs-cls": "^3.0.0"
   },
   "devDependencies": {
     "@nestjs/platform-express": "^10.0.0",
@@ -45,6 +46,9 @@
   },
   "dependencies": {
     "@dapr/dapr": "^3.2.0"
+  },
+  "optionalDependencies": {
+    "nestjs-cls": "^3.6.0"
   },
   "publishConfig": {
     "access": "public",

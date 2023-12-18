@@ -20,15 +20,8 @@ import { MediatorModule } from './mediator/mediator.module';
       useFactory: (configService: ConfigService) => {
         return {
           onError: () => DaprPubSubStatusEnum.RETRY,
-          serverHost: configService.get('DAPR_SERVER_HOST'),
-          serverPort: configService.get('DAPR_SERVER_PORT'),
-          daprHost: configService.get('DAPR_HOST'),
-          daprPort: configService.get('DAPR_PORT'),
-          actorOptions: {
-            prefix:
-              configService.get('NAMESPACE') ??
-              configService.get('DAPR_ACTOR_PREFIX'),
-          },
+          serverHost: configService.get('DAPR_SERVER_HOST') ?? 'localhost',
+          serverPort: configService.get('DAPR_SERVER_PORT') ?? '3001',
           clientOptions: {
             daprHost: configService.get('DAPR_HOST'),
             daprPort: configService.get('DAPR_PORT'),
@@ -38,7 +31,7 @@ import { MediatorModule } from './mediator/mediator.module';
             actor: {
               reentrancy: {
                 enabled: true,
-                maxStackDepth: 6,
+                maxStackDepth: 32,
               },
               actorIdleTimeout: '1m',
               actorScanInterval: '30s',

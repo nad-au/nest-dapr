@@ -4,8 +4,8 @@ import { Inject } from '@nestjs/common';
 import { CacheService } from './cache.service';
 
 export abstract class CounterActorInterface {
-  abstract increment(): Promise<void>;
-  abstract getCounter(): Promise<number>;
+  abstract increment(context?: any): Promise<void>;
+  abstract getCounter(context?: any): Promise<number>;
 }
 
 @DaprActor({
@@ -25,7 +25,8 @@ export class CounterActor
     return super.onActivate();
   }
 
-  async increment(): Promise<void> {
+  async increment(context?: any): Promise<void> {
+    console.log('context', context);
     this.counter++;
     // Use a NestJS service as an example.
     // Share in memory state between actors on this node.
@@ -35,7 +36,8 @@ export class CounterActor
     await this.saveState();
   }
 
-  async getCounter(): Promise<number> {
+  async getCounter(context?: any): Promise<number> {
+    console.log('context', context);
     const counter = await this.getState('counter', 0);
     this.counter = counter;
     return counter;
