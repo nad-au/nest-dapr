@@ -4,7 +4,7 @@ import { Inject } from '@nestjs/common';
 import { StatelessCounterActorInterface } from './stateless-counter.actor';
 
 export abstract class ContextAwareActorInterface {
-  abstract run(context?: any): Promise<string>;
+  abstract run(): Promise<string>;
 }
 
 @DaprActor({
