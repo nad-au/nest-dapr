@@ -8,6 +8,7 @@ import { CqrsModule } from '@nestjs/cqrs';
 import { CounterModule } from './counter/counter.module';
 import { ActorModule } from './actors/actor.module';
 import { MediatorModule } from './mediator/mediator.module';
+import { DaprContextProvider } from '../../../lib/dapr.module';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { MediatorModule } from './mediator/mediator.module';
               actorIdleTimeout: '1m',
               actorScanInterval: '30s',
             },
+            contextProvider: DaprContextProvider.NestCLS,
           },
           communicationProtocol:
             configService.get('DAPR_COMMUNICATION_PROTOCOL') ??
