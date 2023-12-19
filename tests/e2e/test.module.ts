@@ -7,6 +7,7 @@ import { CacheService } from '../src/cache.service';
 import { CounterController } from './counter.controller';
 import { ContextAwareActor } from '../src/context-aware.actor';
 import { ClsModule } from 'nestjs-cls';
+import { DaprContextProvider } from '../../lib/dapr.module';
 
 @Module({
   imports: [
@@ -34,18 +35,10 @@ import { ClsModule } from 'nestjs-cls';
           actorScanInterval: '30s',
         },
       },
-      actorOptions: {
-        prefix: 'test',
-        typeNamePrefix: 'Test',
-      },
+      contextProvider: DaprContextProvider.NestCLS,
     }),
   ],
   controllers: [CounterController],
-  providers: [
-    CacheService,
-    StatelessCounterActor,
-    CounterActor,
-    ContextAwareActor,
-  ],
+  providers: [CacheService, StatelessCounterActor, CounterActor, ContextAwareActor],
 })
 export class TestModule {}

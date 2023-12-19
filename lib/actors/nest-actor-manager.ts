@@ -1,11 +1,11 @@
 import { randomUUID } from 'crypto';
 import { AbstractActor, ActorId } from '@dapr/dapr';
+import ActorClientHTTP from '@dapr/dapr/actors/client/ActorClient/ActorClientHTTP';
 import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 import { Injectable, Logger, Scope, Type } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
-import { CLS_ID } from 'nestjs-cls';
-import { DaprContextService } from '../dapr-context-service';
+import { DAPR_CORRELATION_ID_KEY, DaprContextService } from '../dapr-context-service';
 import { DaprModuleActorOptions } from '../dapr.module';
 
 @Injectable()
@@ -45,6 +45,79 @@ export class NestActorManager {
     };
   }
 
+  setupReentrancy() {
+    // Here we are patching the ActorClientHTTP to support reentrancy using the `Dapr-Reentrancy-Id` header
+    // All subsequent calls in a request chain must use the same correlation/reentrancy ID for the reentrancy to work
+    ActorClientHTTP.prototype.invoke = async function (
+      actorType: string,
+      actorId: ActorId,
+      methodName: string,
+      body: any,
+      reentrancyId?: string,
+    ) {
+      const urlSafeId = encodeURIComponent(actorId.getId());
+      const result = await this.client.execute(`/actors/${actorType}/${urlSafeId}/method/${methodName}`, {
+        method: 'POST', // we always use POST calls for Invoking (ref: https://github.com/dapr/js-sdk/pull/137#discussion_r772636068)
+        body,
+        headers: {
+          'Dapr-Reentrancy-Id': reentrancyId,
+        },
+      });
+      return result as object;
+    };
+  }
+
+  setupCSLWrapper(
+    contextService: DaprContextService,
+    invokeWrapperFn?: (
+      actorId: ActorId,
+      methodName: string,
+      data: any,
+      method: (actorId: ActorId, methodName: string, data: any) => Promise<any>,
+    ) => Promise<any>,
+  ) {
+    // Here we are setting up CLS to work with the Dapr ActorManager
+    const clsService = contextService.getService();
+    if (!clsService) {
+      throw new Error(`Unable to resolve a CLS from the NestJS DI container`);
+    }
+
+    // The original invoke actor method call
+    const originalCallActor = ActorManager.prototype.callActorMethod;
+
+    // Create a new callActor method that wraps CLS
+    ActorManager.prototype.callActorMethod = async function (actorId: ActorId, methodName: string, data: any) {
+      // Try catch, log and rethrow any errors
+      try {
+        return await clsService.run(async () => {
+          contextService.setIdIfNotDefined();
+          // Try to extract the context from the data object
+          // This method will remove any context from the data object (destructive)
+          const context = NestActorManager.extractContext(data);
+          // If we have found a context object, set it in the CLS
+          if (context) {
+            contextService.set(context);
+            // Attempt to set the correlation ID from the context
+            const correlationId = context[DAPR_CORRELATION_ID_KEY] ?? randomUUID();
+            if (correlationId) {
+              contextService.setCorrelationId(correlationId);
+            }
+          }
+
+          if (invokeWrapperFn) {
+            return await invokeWrapperFn(actorId, methodName, data, originalCallActor.bind(this));
+          } else {
+            return await originalCallActor.bind(this)(actorId, methodName, data);
+          }
+        });
+      } catch (error) {
+        Logger.error(`Error invoking actor method ${actorId}/${methodName}`);
+        Logger.error(error);
+        throw error;
+      }
+    };
+  }
+
   private async resolveDependencies(moduleRef: ModuleRef, instance: any): Promise<void> {
     const type = instance.constructor;
     try {
@@ -72,86 +145,31 @@ export class NestActorManager {
       throw error;
     }
   }
-
-  setupCSLWrapper(
-    contextService: DaprContextService,
-    invokeWrapperFn?: (
-      actorId: ActorId,
-      methodName: string,
-      data: any,
-      method: (actorId: ActorId, methodName: string, data: any) => Promise<any>,
-    ) => Promise<any>,
-  ) {
-    const clsService = contextService.getService();
-    if (!clsService) {
-      throw new Error(`Unable to resolve a CLS from the NestJS DI container`);
-    }
-
-    // The original invoke actor method call
-    const originalCallActor = ActorManager.prototype.callActorMethod;
-
-    // Create a new callActor method that wraps CLS
-    ActorManager.prototype.callActorMethod = async function (actorId: ActorId, methodName: string, data: any) {
-      // Try catch, log and rethrow any errors
-      try {
-        return await clsService.run(async () => {
-          clsService.setIfUndefined<any>(CLS_ID, randomUUID());
-          // Try to extract the context from the data object
-          const context = NestActorManager.extractContext(data);
-          // If we have found a context object, set it in the CLS
-          if (context) {
-            contextService.set(context);
-            // Remove the context from the data object
-            data = NestActorManager.removeContext(data);
-          }
-          if (invokeWrapperFn) {
-            return await invokeWrapperFn(actorId, methodName, data, originalCallActor.bind(this));
-          } else {
-            return await originalCallActor.bind(this)(actorId, methodName, data);
-          }
-        });
-      } catch (error) {
-        Logger.error(`Error invoking actor method ${actorId}/${methodName}`);
-        Logger.error(error);
-        throw error;
-      }
-    };
-  }
-
   private static extractContext(data: any): any {
     if (!data) return undefined;
     // The context object should always be the last item in the array
     if (Array.isArray(data)) {
       const lastItem = data[data.length - 1];
       if (lastItem['$t'] === 'ctx') {
+        // Remove this item from the array
+        data.pop();
         return lastItem;
       }
     }
     // Perhaps the context is the entire object?
     if (data['$t'] === 'ctx') {
-      return data;
-    }
-    // Allow embedding the context as a property
-    return data['$ctx'];
-  }
-
-  private static removeContext(data: any): any {
-    if (!data) return undefined;
-    if (Array.isArray(data)) {
-      const lastItem = data[data.length - 1];
-      if (lastItem['$t'] === 'ctx') {
-        return data.slice(0, data.length - 1);
-      }
-    }
-    // Perhaps the context is the entire object?
-    if (data['$t'] === 'ctx') {
-      return undefined;
+      // Copy the context object and remove it from the data object
+      const context = Object.assign({}, data);
+      data = undefined;
+      return context;
     }
     // Allow embedding the context as a property
     if (data['$ctx']) {
+      const context = Object.assign({}, data['$ctx']);
       data['$ctx'] = undefined;
+      return context;
     }
-    return data;
+    return undefined;
   }
 }
 

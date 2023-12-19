@@ -4,6 +4,7 @@ import Class from '@dapr/dapr/types/Class';
 import { DaprClientOptions } from '@dapr/dapr/types/DaprClientOptions';
 import { ModuleRef } from '@nestjs/core';
 import { DaprContextService } from '../dapr-context-service';
+import { Logger } from '@nestjs/common';
 
 export class ActorProxyBuilder<T> {
   moduleRef: ModuleRef;
@@ -11,11 +12,7 @@ export class ActorProxyBuilder<T> {
   actorClient: ActorClient;
   actorTypeClass: Class<T>;
 
-  constructor(
-    moduleRef: ModuleRef,
-    actorTypeClass: Class<T>,
-    daprClient: DaprClient,
-  );
+  constructor(moduleRef: ModuleRef, actorTypeClass: Class<T>, daprClient: DaprClient);
   constructor(
     moduleRef: ModuleRef,
     actorTypeClass: Class<T>,
@@ -41,12 +38,7 @@ export class ActorProxyBuilder<T> {
       );
     } else {
       const [host, port, communicationProtocol, clientOptions] = args;
-      this.actorClient = new ActorClient(
-        host,
-        port,
-        communicationProtocol,
-        clientOptions,
-      );
+      this.actorClient = new ActorClient(host, port, communicationProtocol, clientOptions);
     }
   }
 
@@ -58,18 +50,13 @@ export class ActorProxyBuilder<T> {
       get: (_target: any, propKey: any, _receiver: any) => {
         return async (...args: any) => {
           const originalBody = args.length > 0 ? args : null;
-          const body = await this.prepareBody(
-            this.daprContextService,
-            args,
-            originalBody,
-          );
-          const res = await actorClient.actor.invoke(
-            actorTypeClassName,
-            actorId,
-            propKey,
-            body,
-          );
-          return res;
+          const body = await this.prepareBody(this.daprContextService, args, originalBody);
+          // Either get the correlation ID from the context or generate a new one
+          const correlationId = this.daprContextService.getCorrelationId(true);
+          // eslint-disable-next-line
+          // @ts-ignore
+          const response = await actorClient.actor.invoke(actorTypeClassName, actorId, propKey, body, correlationId);
+          return response;
         };
       },
     };
@@ -77,17 +64,10 @@ export class ActorProxyBuilder<T> {
     // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy/Proxy
     // we implement a handler that will take a method and forward it to the actor client
     const proxy = new Proxy(this.actorTypeClass, handler);
-
-    // Return a NOT strongly typed API
-    // @todo: this should return a strongly typed API as well, but requires reflection. How to do this in typescript?
     return proxy as unknown as T;
   }
 
-  private async prepareBody(
-    daprContextService: DaprContextService,
-    args: any[],
-    body: any,
-  ): Promise<any> {
+  private async prepareBody(daprContextService: DaprContextService, args: any[], body: any): Promise<any> {
     try {
       if (!daprContextService) return body;
       const context = daprContextService.get();
@@ -115,6 +95,7 @@ export class ActorProxyBuilder<T> {
       // No mutations were made
       return body;
     } catch (error) {
+      Logger.error(error);
       return body;
     }
   }
