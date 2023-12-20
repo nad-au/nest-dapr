@@ -3,7 +3,7 @@ import { DAPR_ACTOR_STATE_METADATA } from '../constants';
 import { StateProperty } from '../dapr-actor-state.decorator';
 
 export interface IState {
-  fromJSON(json: any): void;
+  fromJSON(json: any): this;
   toJSON(): any;
 }
 
@@ -48,13 +48,14 @@ export class StatefulActor extends AbstractActor {
         // We have obtained the raw value from the state store, but we need to convert it to the correct type
         // Lets see if the type has a `fromJSON` and a `toJSON` method
         if (property.serializable) {
-          // New up a new instance of the type and call the `fromJSON` method
-          let instance: IState = this.createInstance(property.type);
-          if (!instance && typeof property.defaultValue === 'function') {
+          let instance: IState;
+          if (typeof property.defaultValue === 'function') {
             instance = property.defaultValue();
+          } else {
+            // New up a new instance of the type (call the constructor)
+            instance = this.createInstance(property.type);
           }
-          instance.fromJSON(rawValue);
-          this[property.key] = instance;
+          this[property.key] = instance.fromJSON(rawValue) ?? instance;
         } else {
           this[property.key] = rawValue;
         }

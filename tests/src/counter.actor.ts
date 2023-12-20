@@ -13,6 +13,7 @@ export class CounterState implements IState {
 
   fromJSON(json: any) {
     this.counter = json.counter;
+    return this;
   }
 
   toJSON(): any {
