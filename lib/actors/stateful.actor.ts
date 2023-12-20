@@ -2,6 +2,11 @@ import { AbstractActor } from '@dapr/dapr';
 import { DAPR_ACTOR_STATE_METADATA } from '../constants';
 import { StateProperty } from '../dapr-actor-state.decorator';
 
+export interface IState {
+  fromJSON(json: any): void;
+  toJSON(): any;
+}
+
 export class StatefulActor extends AbstractActor {
   private stateProperties: StateProperty[];
 
@@ -25,40 +30,51 @@ export class StatefulActor extends AbstractActor {
   }
 
   async onActivate(): Promise<void> {
-    this.stateProperties =
-      (Reflect.getMetadata(
-        DAPR_ACTOR_STATE_METADATA,
-        this.constructor,
-      ) as StateProperty[]) || [];
+    this.stateProperties = (Reflect.getMetadata(DAPR_ACTOR_STATE_METADATA, this.constructor) as StateProperty[]) || [];
     await super.onActivate();
     await this.getAllState();
   }
 
   async getAllState() {
     for (const property of this.stateProperties) {
-      const value = await this.getState(property.name);
-      if (value === undefined) {
+      const rawValue = await this.getState(property.name);
+      if (rawValue === undefined) {
         if (typeof property.defaultValue === 'function') {
           this[property.key] = property.defaultValue();
         } else {
           this[property.key] = property.defaultValue;
         }
       } else {
-        this[property.key] = value;
+        // We have obtained the raw value from the state store, but we need to convert it to the correct type
+        // Lets see if the type has a `fromJSON` and a `toJSON` method
+        if (property.serializable) {
+          // New up a new instance of the type and call the `fromJSON` method
+          let instance: IState = this.createInstance(property.type);
+          if (!instance && typeof property.defaultValue === 'function') {
+            instance = property.defaultValue();
+          }
+          instance.fromJSON(rawValue);
+          this[property.key] = instance;
+        } else {
+          this[property.key] = rawValue;
+        }
       }
     }
   }
 
   async setAllStateFromProperties() {
     for (const property of this.stateProperties) {
-      await this.setState(property.name, this[property.key]);
+      let value = this[property.key];
+      // If the property is serializable, then we need to call the `toJSON` method
+      if (property.serializable) {
+        const instance = value as IState;
+        value = instance.toJSON();
+      }
+      await this.setState(property.name, value);
     }
   }
 
-  async getState<T>(
-    stateName: string,
-    defaultValue: T = undefined,
-  ): Promise<T | undefined> {
+  async getState<T>(stateName: string, defaultValue: T = undefined): Promise<T | undefined> {
     try {
       const value = await this.getStateManager<T>().getState(stateName);
       if (value === undefined) {
@@ -75,4 +91,10 @@ export class StatefulActor extends AbstractActor {
       throw e;
     }
   }
+
+  private createInstance<T>(type: Constructor<T> | { new (): T } | any): T {
+    return new type();
+  }
 }
+
+type Constructor<T = any> = new (...args: any[]) => T;
