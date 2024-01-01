@@ -9,7 +9,7 @@ export abstract class CounterActorInterface {
 }
 
 export class CounterState implements IState {
-  counter: number;
+  counter: number = 0;
 
   fromJSON(json: any) {
     this.counter = json.counter;

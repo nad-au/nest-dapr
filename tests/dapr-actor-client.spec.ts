@@ -8,7 +8,7 @@ import { CounterActorInterface } from './src/counter.actor';
 import { CacheService } from './src/cache.service';
 
 // To run inside Dapr use:
-// dapr run --app-id nest-dapr --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test
+// dapr run --app-id nest-dapr --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test -- dapr-actor-client
 describe('DaprActorClient', () => {
   let testingModule: TestingModule;
   let app: INestApplication;

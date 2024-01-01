@@ -9,7 +9,7 @@ import { DaprContextService } from '../lib';
 import { itWithContext, sleep } from './test.utils';
 
 // To run inside Dapr use:
-// dapr run --app-id nest-dapr-test --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test
+// dapr run --app-id nest-dapr-test --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test -- dapr-actor-context
 describe('DaprActorContext', () => {
   let testingModule: TestingModule;
   let app: INestApplication;

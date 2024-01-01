@@ -5,11 +5,14 @@ export interface StateProperty {
   key: string | symbol;
   name: string;
   type: Function | Type<any>;
-  defaultValue?: any;
+  defaultValue?: (() => any) | Function | Type<any>;
   serializable?: boolean;
 }
 
-export function State(options?: { defaultValue?: any; name?: string }): PropertyDecorator {
+export function State(options?: {
+  defaultValue?: (() => any) | Function | Type<any>;
+  name?: string;
+}): PropertyDecorator {
   return (target, propertyKey) => {
     const properties: StateProperty[] = Reflect.getMetadata(DAPR_ACTOR_STATE_METADATA, target.constructor) || [];
     // Get the type of the property (might be useful for conversions later)

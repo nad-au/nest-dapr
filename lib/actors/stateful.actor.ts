@@ -40,26 +40,23 @@ export class StatefulActor extends AbstractActor {
       const rawValue = await this.getState(property.name);
       if (rawValue === undefined) {
         if (typeof property.defaultValue === 'function') {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
           this[property.key] = property.defaultValue();
         } else if (property.defaultValue !== undefined) {
           this[property.key] = property.defaultValue;
         } else {
           // Attempt to new up a new instance of the type (call the constructor)
-          this[property.key] = this.createInstance(property.type);
+          this[property.key] = this.createStatePropertyInstance(property);
         }
       } else {
         // We have obtained the raw value from the state store, but we need to convert it to the correct type
         // Lets see if the type has a `fromJSON` and a `toJSON` method
         if (property.serializable) {
           // Assume that the type has a `fromJSON` and a `toJSON` methods (loose typing)
-          let instance: IState;
-          if (typeof property.defaultValue === 'function') {
-            instance = property.defaultValue();
-          } else {
-            // New up a new instance of the type (call the constructor)
-            // Assuming that the type has a default constructor
-            instance = this.createInstance(property.type);
-          }
+          // New up a new instance of the type (call the constructor)
+          // Assuming that the type has a default constructor
+          const instance: IState = this.createStatePropertyInstance(property);
           this[property.key] = instance.fromJSON(rawValue) ?? instance;
         } else {
           this[property.key] = rawValue;
@@ -99,9 +96,20 @@ export class StatefulActor extends AbstractActor {
     }
   }
 
-  private createInstance<T>(type: Constructor<T> | { new (): T } | any): T {
+  private createStatePropertyInstance<T>(property: StateProperty): T {
     try {
-      return new type();
+      if (property.defaultValue !== undefined) {
+        if (property.defaultValue instanceof Function || typeof property.defaultValue === 'function') {
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          return property.defaultValue();
+        }
+        return property.defaultValue;
+      }
+      if (property.type || property.serializable) {
+        const type: Constructor<T> | { new (): T } | any = property.type;
+        return new type();
+      }
     } catch (e) {
       // If we get an error, then it is likely that the type does not have a default constructor
       // Or cannot be newed up using the `new` keyword, so lets just return undefined
