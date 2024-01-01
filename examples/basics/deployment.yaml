@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: nestjs-app
+  labels:
+    app: nestjs-app
+spec:
+  serviceName: "nestjs-app-service"  # The service that governs this StatefulSet
+  replicas: 3
+  selector:
+    matchLabels:
+      app: nestjs-app
+  template:
+    metadata:
+      labels:
+        app: nestjs-app
+      annotations:
+        dapr.io/enabled: "true"
+        dapr.io/app-id: "nestjs-app"
+        dapr.io/app-port: "3001"
+    spec:
+      containers:
+        - name: nestjs-app
+          # From the Dockerfile
+          # eg docker build -t nest-dapr-example:latest .
+          image: nest-dapr-example
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000 # NestJS
+            - containerPort: 3001 # Dapr Server
+          env:
+            - name: DAPR_SERVER_HOST
+              value: "0.0.0.0"
+            - name: DAPR_SERVER_PORT
+              value: "3001"
+            - name: DAPR_COMMUNICATION_PROTOCOL
+              value: "HTTP"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+---
+# Expose the node app for testing
+apiVersion: v1
+kind: Service
+metadata:
+  name: nestjs-app-service
+spec:
+  type: NodePort
+  selector:
+    app: nestjs-app
+  ports:
+    - name: nestjs-app-port
+      port: 3000
+      nodePort: 32000
+  sessionAffinity: None

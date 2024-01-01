@@ -1,13 +1,27 @@
-Develop NestJs microservices using [Dapr](https://dapr.io/) pubsub and bindings.
+[![npm version](https://badge.fury.io/js/@rayondigital%2Fnest-dapr.svg)](https://badge.fury.io/js/@rayondigital%2Fnest-dapr)
+
+# NestJS + Dapr
+Develop NestJs microservices using [Dapr](https://dapr.io/) pubsub, actors and bindings.
 
 # Description
 
 Dapr Module for [Nest](https://github.com/nestjs/nest) built on top of the [Dapr JS SDK](https://github.com/dapr/js-sdk).
 
+
+# Supported features
+- [x] [Actors](https://docs.dapr.io/developing-applications/building-blocks/actors/actors-overview/)
+- [x] [PubSub](https://docs.dapr.io/developing-applications/building-blocks/pubsub/pubsub-overview/)
+- [x] [Bindings](https://docs.dapr.io/developing-applications/building-blocks/bindings/bindings-overview/)
+- [ ] [Distributed Lock](https://docs.dapr.io/developing-applications/building-blocks/distributed-lock/)
+- [ ] [State](https://docs.dapr.io/developing-applications/building-blocks/state-management/state-management-overview/)
+- [ ] [Service Invocation](https://docs.dapr.io/developing-applications/building-blocks/service-invocation/service-invocation-overview/)
+- [ ] [Workflows](https://docs.dapr.io/developing-applications/building-blocks/workflow/workflow-overview/)
+
+
 # Installation
 
 ```bash
-npm i --save @dbc-tech/nest-dapr
+npm i --save @rayondigital/nest-dapr
 ```
 
 # Requirements
@@ -21,13 +35,13 @@ dapr --version
 Output:
 
 ```
-CLI version: 1.7.1
-Runtime version: 1.7.4
+CLI version: 1.12.0
+Runtime version: 1.12.2
 ```
 
 # Quick start
 
-The following scaffolds a [Nest](https://github.com/nestjs/nest) project with the [nest-dapr](https://www.npmjs.com/package/@dbc-tech/nest-dapr) package and demonstrates using Nest with Dapr using [RabbitMQ](https://www.rabbitmq.com/) pubsub & queue bindings.
+The following scaffolds a [Nest](https://github.com/nestjs/nest) project with the [nest-dapr](https://www.npmjs.com/package/@rayondigital/nest-dapr) package and demonstrates using Nest with Dapr using actors and [RabbitMQ](https://www.rabbitmq.com/) pubsub bindings.
 
 Install Nest [CLI](https://docs.nestjs.com/cli/overview)
 
@@ -42,10 +56,10 @@ nest new nest-dapr
 cd nest-dapr/
 ```
 
-Install [nest-dapr](https://www.npmjs.com/package/@dbc-tech/nest-dapr) package
+Install [nest-dapr](https://www.npmjs.com/package/@rayondigital/nest-dapr) package
 
 ```bash
-npm i --save @dbc-tech/nest-dapr
+npm i --save @rayondigital/nest-dapr
 ```
 
 Import `DaprModule` in `AppModule` class
@@ -79,6 +93,82 @@ export class AppController {
   }
 }
 ```
+
+## Actors
+
+Create actors and connect them to your NestJS application using the `@DaprActor` decorator.
+This decorator takes in the interface of the actor, and marks the Actor as transient inside the NestJS
+dependency injection container.
+
+```typescript
+// You must expose your actors interface as an abstract class because Typescript interfaces are not available at runtime (erasure).
+// Having the interface as an abstract class allows us to call the actor by only knowing the interface type.
+export abstract class CounterActorInterface {
+  abstract increment(): Promise<number>;
+  abstract getCounter(): Promise<number>;
+}
+
+@DaprActor({
+  interfaceType: CounterActorInterface,
+})
+export class CounterActor
+  extends StatefulActor
+  implements CounterActorInterface
+{
+  // You can inject other NestJS services into your actor.
+  // Only Singleton services are supported at this time.
+  @Inject(CacheService)
+  private readonly cacheService: CacheService;
+
+  counter: number;
+
+  async onActivate(): Promise<void> {
+    this.counter = await this.getState('counter', 0);
+    return super.onActivate();
+  }
+
+  async increment(): Promise<number> {
+    this.counter++;
+    // Use a NestJS service as an example.
+    // Share in memory state between actors on this node.
+    // You probably will never want to do this, but we're just demonstrating a singleton service.
+    await this.cacheService.increment('total');
+
+    await this.setState('counter', this.counter);
+    await this.saveState();
+    return this.counter;
+  }
+
+  async getCounter(): Promise<number> {
+    return this.counter;
+  }
+}
+```
+
+### Actor Client
+
+This module provides the `DaprActorClient` which is a NestJS service.
+It can be injected into controllers, services, handlers and other actors.
+It acts as a proxy service to the actors, and allows you to call methods on the actors - similar to the Orleans GrainFactory.
+
+```typescript
+@Controller()
+export class CounterController {
+  constructor(
+    private readonly actorClient: DaprActorClient,
+  ) {}
+
+  @Get(":id")
+  async increment(@Param("id") id: string): Promise<string> {
+    const value = await this.actorClient
+      .getActor(CounterActorInterface, id)
+      .increment();
+    return `Counter incremented to ${value}`;
+  }
+}
+```
+
+## PubSub
 
 Create pubsub & topic names used for pubsub operations and message interface
 
@@ -179,7 +269,7 @@ Full example
 
 ```typescript
 import { DaprClient } from '@dapr/dapr';
-import { DaprPubSub } from '@dbc-tech/nest-dapr';
+import { DaprPubSub } from '@rayondigital/nest-dapr';
 import { Controller, Get, Post } from '@nestjs/common';
 import { AppService } from './app.service';
 
@@ -391,7 +481,7 @@ In this example the handler `bindingHandler` method will receive messages from t
 Here's an example of a [Provider](https://docs.nestjs.com/providers) containing a Dapr handler.
 
 ```typescript
-import { DaprPubSub } from '@dbc-tech/nest-dapr';
+import { DaprPubSub } from '@rayondigital/nest-dapr';
 import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
@@ -407,17 +497,35 @@ export class AppService {
 
 # Examples
 
-| Example | Description |
-|---|---|
-| [Basics](examples/basics/README.md) | Demonstrates pubsub & input binding using RabbitMQ |
+| Example | Description                                                             |
+|---|-------------------------------------------------------------------------|
+| [Basics](examples/basics/README.md) | Demonstrates a very basic actors, pubsub & input binding using RabbitMQ |
 
 # Troubleshooting
 
-[Dapr](https://dapr.io/) is a complex set of tools and services and must be set-up and deployed carefully to ensure your system operates correctly. `nest-dapr` is merely [syntactic sugar](https://en.wikipedia.org/wiki/Syntactic_sugar) over the existing Dapr [js-sdk](https://github.com/dapr/js-sdk). If things are not working out for you please review Dapr & SDK documentation and issues. Also please use one of the examples provided in this repo. They are updated and tested regularly and should work out of the box. If you find that both Dapr and the Javascript SDK is both working fine but `nest-dapr` is not working in some way, please file an issue and state clearly the problem and provide a reproducable code example. Filing an issue with something like: "It doesn't work" is likely to be ignored. Thank you.
+[Dapr](https://dapr.io/) is a complex set of tools and services and must be set-up and deployed carefully to ensure your system operates correctly. 
+This library is merely integration using the existing Dapr [js-sdk](https://github.com/dapr/js-sdk). 
+If things are not working out for you please review:
+- Your configuration
+- Your Dapr local environment
+- Your port numbers and hostnames
+- Dapr & SDK documentation
+- The tests and examples in this project
 
-# Credits
+If you find that both Dapr and the Javascript SDK is both working fine but `nest-dapr` is not working in some way, 
+please file an issue and state clearly the problem and provide a reproducible code example. 
+Filing an issue with something like: "It doesn't work" is likely to be ignored or removed.
 
-Inspiration for this project is taken from [dapr-nestjs-pubsub](https://github.com/avifatal/dapr-nestjs-pubsub) which I believe is the first attempt at integrating [Dapr](https://dapr.io/) with [Nest](https://github.com/nestjs/nest). Unfortunately this repo supports only pubsub messaging and I wanted to support input bindings as well. In the end I adopted the patterns established in Nest's own [event-emitter](https://github.com/nestjs/event-emitter) repo and I pretty much *borrowed* all the metadata, reflection & decorator utils from there.
+# Credits/Contributions :heart:
 
-So full credit goes to the [Nest](https://github.com/nestjs/nest) development team :heart:
+Thanks to:
 
+- [@dbc-tech/nest-dapr](https://github.com/nad-au/nest-dapr) - We forked from this repository
+- [nad-au](https://github.com/nad-au) - Worked on pubsub and initial integration
+- [dapr-nestjs-pubsub](https://github.com/avifatal/dapr-nestjs-pubsub) - The original library
+- [@dapr/dapr](https://github.com/dapr/js-sdk) - Development team
+- [Nest](https://github.com/nestjs/nest) - Development team
+
+# Licence
+
+Released under the [MIT](LICENSE) license. No warranty expressed or implied.

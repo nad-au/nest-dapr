@@ -1,36 +1,84 @@
-import { DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
-import {
-  Inject,
-  Injectable,
-  Logger,
-  OnApplicationBootstrap,
-  OnApplicationShutdown,
-} from '@nestjs/common';
-import { DiscoveryService, MetadataScanner } from '@nestjs/core';
+import { AbstractActor, DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
+import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
+import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
+import Class from '@dapr/dapr/types/Class';
+import { Inject, Injectable, Logger, OnApplicationBootstrap, OnApplicationShutdown, Type } from '@nestjs/common';
+import { DiscoveryService, MetadataScanner, ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
+import { DaprActorClient } from './actors/dapr-actor-client.service';
+import { NestActorManager } from './actors/nest-actor-manager';
+import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
-import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from './dapr.module';
+import { DAPR_MODULE_OPTIONS_TOKEN, DaprContextProvider, DaprModuleOptions } from './dapr.module';
 
 @Injectable()
-export class DaprLoader
-  implements OnApplicationBootstrap, OnApplicationShutdown
-{
+export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown {
   private readonly logger = new Logger(DaprLoader.name);
 
   constructor(
     private readonly discoveryService: DiscoveryService,
+    private readonly metadataScanner: MetadataScanner,
     private readonly daprServer: DaprServer,
     private readonly daprMetadataAccessor: DaprMetadataAccessor,
-    private readonly metadataScanner: MetadataScanner,
     @Inject(DAPR_MODULE_OPTIONS_TOKEN)
     private readonly options: DaprModuleOptions,
+    private readonly daprActorClient: DaprActorClient,
+    private readonly moduleRef: ModuleRef,
+    private readonly contextService: DaprContextService,
+    private readonly actorManager: NestActorManager,
   ) {}
 
   async onApplicationBootstrap() {
+    if (this.options.disabled) {
+      this.logger.log('Dapr server is disabled');
+      return;
+    }
+
+    // Hook into the Dapr Actor Manager
+    this.actorManager.setup(this.moduleRef, this.options.actorOptions);
+    // Setup CLS/ALS for async context propagation
+    if (this.options.contextProvider !== DaprContextProvider.None) {
+      this.actorManager.setupCSLWrapper(this.contextService);
+    }
+    if (this.options.clientOptions?.actor?.reentrancy?.enabled) {
+      this.actorManager.setupReentrancy();
+    }
+
+    await this.daprServer.actor.init();
+
     this.loadDaprHandlers();
+
+    // If the dapr server port is 0, then we will assume that the server is not to be started
+    if (this.options.serverPort === '0') {
+      this.logger.log('Dapr server will not be started');
+      return;
+    }
+
     this.logger.log('Starting Dapr server');
     await this.daprServer.start();
     this.logger.log('Dapr server started');
+
+    const resRegisteredActors = await this.daprServer.actor.getRegisteredActors();
+    if (resRegisteredActors.length > 0) {
+      this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
+    }
+
+    // Setup the actor client
+    if (this.options.actorOptions) {
+      this.daprActorClient.setPrefix(
+        this.options.actorOptions?.prefix ?? '',
+        this.options.actorOptions?.delimiter ?? '-',
+      );
+      this.daprActorClient.setTypeNamePrefix(this.options.actorOptions?.typeNamePrefix ?? '');
+
+      if (this.options.actorOptions?.prefix) {
+        this.logger.log(
+          `Actors will be prefixed with ${this.options.actorOptions?.prefix ?? ''} and delimited with ${
+            this.options.actorOptions?.delimiter ?? '-'
+          }`,
+        );
+      }
+    }
   }
 
   async onApplicationShutdown() {
@@ -41,6 +89,20 @@ export class DaprLoader
 
   loadDaprHandlers() {
     const providers = this.discoveryService.getProviders();
+
+    // Find and register actors
+    providers
+      .filter(
+        (wrapper) =>
+          wrapper.isDependencyTreeStatic() &&
+          wrapper.metatype &&
+          this.daprMetadataAccessor.getDaprActorMetadata(wrapper.metatype),
+      )
+      .forEach(async (wrapper) => {
+        await this.registerActor(wrapper.metatype);
+      });
+
+    // Find and register pubsub and binding handlers
     const controllers = this.discoveryService.getControllers();
     [...providers, ...controllers]
       .filter((wrapper) => wrapper.isDependencyTreeStatic())
@@ -48,41 +110,21 @@ export class DaprLoader
       .forEach(async (wrapper: InstanceWrapper) => {
         const { instance } = wrapper;
         const prototype = Object.getPrototypeOf(instance) || {};
-        this.metadataScanner.scanFromPrototype(
-          instance,
-          prototype,
-          async (methodKey: string) => {
-            await this.subscribeToDaprPubSubEventIfListener(
-              instance,
-              methodKey,
-            );
-            await this.subscribeToDaprBindingEventIfListener(
-              instance,
-              methodKey,
-            );
-          },
-        );
+        this.metadataScanner.scanFromPrototype(instance, prototype, async (methodKey: string) => {
+          await this.subscribeToDaprPubSubEventIfListener(instance, methodKey);
+          await this.subscribeToDaprBindingEventIfListener(instance, methodKey);
+        });
       });
   }
 
-  private async subscribeToDaprPubSubEventIfListener(
-    instance: Record<string, any>,
-    methodKey: string,
-  ) {
-    const daprPubSubMetadata =
-      this.daprMetadataAccessor.getDaprPubSubHandlerMetadata(
-        instance[methodKey],
-      );
+  private async subscribeToDaprPubSubEventIfListener(instance: Record<string, any>, methodKey: string) {
+    const daprPubSubMetadata = this.daprMetadataAccessor.getDaprPubSubHandlerMetadata(instance[methodKey]);
     if (!daprPubSubMetadata) {
       return;
     }
     const { name, topicName, route } = daprPubSubMetadata;
 
-    this.logger.log(
-      `Subscribing to Dapr: ${name}, Topic: ${topicName}${
-        route ? ' on route ' + route : ''
-      }`,
-    );
+    this.logger.log(`Subscribing to Dapr: ${name}, Topic: ${topicName}${route ? ' on route ' + route : ''}`);
     await this.daprServer.pubsub.subscribe(
       name,
       topicName,
@@ -106,14 +148,8 @@ export class DaprLoader
     );
   }
 
-  private async subscribeToDaprBindingEventIfListener(
-    instance: Record<string, any>,
-    methodKey: string,
-  ) {
-    const daprBindingMetadata =
-      this.daprMetadataAccessor.getDaprBindingHandlerMetadata(
-        instance[methodKey],
-      );
+  private async subscribeToDaprBindingEventIfListener(instance: Record<string, any>, methodKey: string) {
+    const daprBindingMetadata = this.daprMetadataAccessor.getDaprBindingHandlerMetadata(instance[methodKey]);
     if (!daprBindingMetadata) {
       return;
     }
@@ -123,5 +159,47 @@ export class DaprLoader
     await this.daprServer.binding.receive(name, async (data: any) => {
       await instance[methodKey].call(instance, data);
     });
+  }
+
+  private async registerActor<T>(actorType: Type<T> | Function) {
+    if (!actorType) return;
+
+    let actorTypeName = actorType.name ?? actorType.constructor.name;
+
+    // We need to get the @DaprActor decorator metadata
+    const daprActorMetadata = this.daprMetadataAccessor.getDaprActorMetadata(actorType);
+
+    const interfaceTypeName =
+      daprActorMetadata?.interfaceType?.name ?? daprActorMetadata?.interfaceType?.constructor.name;
+
+    // The option typeNamePrefix allows you to specify a prefix for the actor type name
+    // For example CounterActor with prefix of 'Prod' would be ProdCounterActor
+    // This is useful in scenarios where environments may share the same placement service
+    if (this.options.actorOptions?.typeNamePrefix) {
+      actorTypeName = this.options.actorOptions.typeNamePrefix + actorTypeName;
+      // Register using a custom actor manager
+      try {
+        const actorManager = ActorRuntime.getInstanceByDaprClient(this.daprServer.client);
+        const managers = actorManager['actorManagers'] as Map<string, ActorManager<any>>;
+        if (!managers.has(actorTypeName)) {
+          managers.set(actorTypeName, new ActorManager(actorType as Class<AbstractActor>, this.daprServer.client));
+        }
+      } catch (err) {
+        await this.daprServer.actor.registerActor(actorType as Class<AbstractActor>);
+      }
+    } else {
+      // Register as normal
+      await this.daprServer.actor.registerActor(actorType as Class<AbstractActor>);
+    }
+
+    this.logger.log(`Registering Dapr Actor: ${actorTypeName} of type ${interfaceTypeName ?? 'unknown'}`);
+
+    // Register the base actor type as a client
+    this.daprActorClient.register(actorTypeName, actorType, this.daprServer.client);
+    // If an interface is provided, register the interface as a client
+    if (daprActorMetadata.interfaceType) {
+      this.daprActorClient.registerInterface(actorType, daprActorMetadata.interfaceType, this.daprServer.client);
+    }
+    return actorTypeName;
   }
 }
