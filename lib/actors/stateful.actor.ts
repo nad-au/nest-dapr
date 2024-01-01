@@ -41,18 +41,23 @@ export class StatefulActor extends AbstractActor {
       if (rawValue === undefined) {
         if (typeof property.defaultValue === 'function') {
           this[property.key] = property.defaultValue();
-        } else {
+        } else if (property.defaultValue !== undefined) {
           this[property.key] = property.defaultValue;
+        } else {
+          // Attempt to new up a new instance of the type (call the constructor)
+          this[property.key] = this.createInstance(property.type);
         }
       } else {
         // We have obtained the raw value from the state store, but we need to convert it to the correct type
         // Lets see if the type has a `fromJSON` and a `toJSON` method
         if (property.serializable) {
+          // Assume that the type has a `fromJSON` and a `toJSON` methods (loose typing)
           let instance: IState;
           if (typeof property.defaultValue === 'function') {
             instance = property.defaultValue();
           } else {
             // New up a new instance of the type (call the constructor)
+            // Assuming that the type has a default constructor
             instance = this.createInstance(property.type);
           }
           this[property.key] = instance.fromJSON(rawValue) ?? instance;
@@ -64,6 +69,7 @@ export class StatefulActor extends AbstractActor {
   }
 
   async setAllStateFromProperties() {
+    // Iterate over all @State properties and set their inner state manager values
     for (const property of this.stateProperties) {
       let value = this[property.key];
       // If the property is serializable, then we need to call the `toJSON` method
@@ -94,7 +100,13 @@ export class StatefulActor extends AbstractActor {
   }
 
   private createInstance<T>(type: Constructor<T> | { new (): T } | any): T {
-    return new type();
+    try {
+      return new type();
+    } catch (e) {
+      // If we get an error, then it is likely that the type does not have a default constructor
+      // Or cannot be newed up using the `new` keyword, so lets just return undefined
+      return undefined;
+    }
   }
 }
 
