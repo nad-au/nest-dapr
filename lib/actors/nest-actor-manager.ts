@@ -43,6 +43,22 @@ export class NestActorManager {
       }
       return instance;
     };
+
+    // Prevent deactive from throwing an unhandled exception
+    const originalDeactivateActor = ActorManager.prototype.deactivateActor;
+    ActorManager.prototype.deactivateActor = async function (actorId: ActorId) {
+      try {
+        // If the actor is not known to this server then just return without error
+        // There is no need to throw an error here
+        if (!this.actors.has(actorId.getId())) {
+          return;
+        }
+        await originalDeactivateActor.bind(this)(actorId);
+      } catch (error) {
+        Logger.error(`Error deactivating actor ${actorId}`);
+        Logger.error(error);
+      }
+    };
   }
 
   setupReentrancy() {
