@@ -1,7 +1,7 @@
 import { ActorId } from '@dapr/dapr';
+import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
 import { Injectable } from '@nestjs/common';
-import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 
 @Injectable()
 export class ActorRuntimeService {
