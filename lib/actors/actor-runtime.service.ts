@@ -1,23 +1,26 @@
 import { ActorId } from '@dapr/dapr';
 import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
 import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
-import { Injectable } from '@nestjs/common';
+import { Injectable, Type } from '@nestjs/common';
+import { DaprActorClient } from './dapr-actor-client.service';
 
 @Injectable()
 export class ActorRuntimeService {
+  constructor(private readonly actorClient: DaprActorClient) {}
+
   // Returns the current actor runtime instance for this process
-  public getRuntime() {
+  getRuntime() {
     return ActorRuntime['instance'] as ActorRuntime;
   }
 
   // Returns the actor manager for the given actor type name
-  public getActorManager<TActorInterface>(actorTypeName: string) {
+  getActorManager<TActorInterface>(actorTypeName: string) {
     // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     return this.getRuntime().getActorManager<TActorInterface>(actorTypeName);
   }
 
-  public getAllActors(): Map<string, any> {
+  getAllActors(): Map<string, any> {
     const runtime = this.getRuntime();
     const actorManagers = runtime['actorManagers'] as Map<string, ActorManager<any>>;
     const actors = new Map<string, any>();
@@ -32,22 +35,36 @@ export class ActorRuntimeService {
     return actors;
   }
 
-  public getActors<TActorInterface>(actorTypeName: string) {
+  getActors<TActorInterface>(actorTypeName: string) {
     const manager = this.getActorManager<TActorInterface>(actorTypeName);
     return manager.actors;
   }
 
-  public getActor<TActorInterface>(actorTypeName: string, actorId: string) {
+  getActor<TActorInterface>(actorType: Type<TActorInterface> | Function, actorId: string): TActorInterface {
+    const typeName = actorType.name ?? actorType.constructor.name;
+    // Resolve the actor type name from the interface type name/or actor type name
+    const actorTypeName = this.actorClient.getActorTypeName(typeName);
+    return this.getActorByTypeName<TActorInterface>(actorTypeName, actorId);
+  }
+
+  public getActorByTypeName<TActorInterface>(actorTypeName: string, actorId: string) {
     const manager = this.getActorManager(actorTypeName);
     return manager.actors.get(actorId) as TActorInterface;
   }
 
-  public hasActor(actorTypeName: string, actorId: string) {
+  public hasActor<TActorInterface>(actorType: Type<TActorInterface> | Function, actorId: string) {
+    const typeName = actorType.name ?? actorType.constructor.name;
+    // Resolve the actor type name from the interface type name/or actor type name
+    const actorTypeName = this.actorClient.getActorTypeName(typeName);
+    return this.hasActorByTypeName(actorTypeName, actorId);
+  }
+
+  public hasActorByTypeName(actorTypeName: string, actorId: string) {
     const manager = this.getActorManager(actorTypeName);
     return manager.actors.has(actorId);
   }
 
-  public async invoke<TActorInterface, TResult>(
+  async invoke<TActorInterface, TResult>(
     actorTypeName: string,
     actorId: string,
     methodName: string,
@@ -58,7 +75,7 @@ export class ActorRuntimeService {
     return await manager.invoke(new ActorId(actorId), methodName, Buffer.from(requestBody));
   }
 
-  public async removeInstance(actorTypeName: string, actorId: string) {
+  async removeInstance(actorTypeName: string, actorId: string) {
     const manager = this.getActorManager(actorTypeName);
     return manager.actors.delete(actorId);
   }
