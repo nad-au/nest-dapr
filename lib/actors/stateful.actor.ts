@@ -1,6 +1,6 @@
-import { AbstractActor } from '@dapr/dapr';
 import { DAPR_ACTOR_STATE_METADATA } from '../constants';
 import { StateProperty } from '../dapr-actor-state.decorator';
+import { AbstractActor } from './abstract-actor';
 
 export interface IState {
   fromJSON(json: any): this;

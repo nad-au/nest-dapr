@@ -9,6 +9,11 @@ export class DaprClientCache {
   private static actorClients = new Map<string, ActorClient>();
   private static stateProviders = new Map<string, StateProvider>();
 
+  static getDaprClient(): DaprClient | undefined {
+    if (this.clients.size === 0) return undefined;
+    return this.clients.entries().next().value[1];
+  }
+
   static getAllClients(): DaprClient[] {
     return Array.from(this.clients.values());
   }
