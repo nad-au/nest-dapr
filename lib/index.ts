@@ -1,3 +1,4 @@
+import { DaprClientCache } from './actors/client-cache';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { StatefulActorOf } from './actors/stateful-actor-of';
 import { IState, StatefulActor } from './actors/stateful.actor';
@@ -33,6 +34,7 @@ export {
   DaprModule,
   DaprActorClient,
   DaprContextService,
+  DaprClientCache,
   StatefulActor,
   StatefulActorOf,
   IState,

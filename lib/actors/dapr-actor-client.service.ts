@@ -6,8 +6,8 @@ import { ActorProxyBuilder } from './actor-proxy-builder';
 
 @Injectable()
 export class DaprActorClient {
-  // Keys are the actor type names in lower case and values are the actor client builders
-  private actorClients: Map<string, ActorProxyBuilder<any>> = new Map();
+  // Keys are the actor type names in lower case and values are the actor client proxy builders
+  private actorProxyBuilders: Map<string, ActorProxyBuilder<any>> = new Map();
   // Keys are the actor type names in lower case and values are the actor types / interfaces
   private interfaces: Map<string, Type<any> | Function> = new Map();
   // Keys are the interface name in lower case and values are the actor type names in lower case
@@ -16,10 +16,7 @@ export class DaprActorClient {
   private delimiter = '-';
   private typeNamePrefix = '';
 
-  constructor(
-    private readonly moduleRef: ModuleRef,
-    private readonly daprClient: DaprClient,
-  ) {}
+  constructor(private readonly moduleRef: ModuleRef, private readonly daprClient: DaprClient) {}
 
   setPrefix(prefix: string, delimiter = '-'): void {
     this.prefix = prefix;
@@ -30,19 +27,11 @@ export class DaprActorClient {
     this.typeNamePrefix = prefix;
   }
 
-  register<T>(
-    actorTypeName: string,
-    actorType: Type<T> | Function,
-    daprClient?: DaprClient,
-  ): void {
+  register<T>(actorTypeName: string, actorType: Type<T> | Function, daprClient?: DaprClient): void {
     this.interfaces.set(this.formatActorTypeName(actorTypeName), actorType);
-    this.actorClients.set(
+    this.actorProxyBuilders.set(
       this.formatActorTypeName(actorTypeName),
-      new ActorProxyBuilder<T>(
-        this.moduleRef,
-        actorType as Class<T>,
-        daprClient ?? this.daprClient,
-      ),
+      new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient),
     );
   }
 
@@ -51,19 +40,14 @@ export class DaprActorClient {
     interfaceType: Type<T> | Function,
     daprClient?: DaprClient,
   ): void {
-    const interfaceTypeName =
-      interfaceType.name ?? interfaceType.constructor.name;
+    const interfaceTypeName = interfaceType.name ?? interfaceType.constructor.name;
     const actorTypeName = actorType.name ?? actorType.constructor.name;
     this.interfaceToActorTypeNames.set(interfaceTypeName, actorTypeName);
     this.interfaces.set(this.formatActorTypeName(interfaceTypeName), actorType);
 
-    this.actorClients.set(
+    this.actorProxyBuilders.set(
       this.formatActorTypeName(interfaceTypeName),
-      new ActorProxyBuilder<T>(
-        this.moduleRef,
-        actorType as Class<T>,
-        daprClient ?? this.daprClient,
-      ),
+      new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient),
     );
   }
 
@@ -74,10 +58,7 @@ export class DaprActorClient {
     return new ActorId(actorId);
   }
 
-  getActor<TActorInterface>(
-    actorType: Type<TActorInterface> | Function,
-    actorId: string,
-  ): TActorInterface {
+  getActor<TActorInterface>(actorType: Type<TActorInterface> | Function, actorId: string): TActorInterface {
     const typeName = actorType.name ?? actorType.constructor.name;
     // Resolve the actor type name from the interface type name/or actor type name
     const actorTypeName = this.getActorTypeName(typeName);
@@ -89,14 +70,11 @@ export class DaprActorClient {
       throw new Error(`Actor ${actorTypeName} not found`);
     }
     const fullActorId = this.getActorId(actorId);
-    const actorClient = this.getActorClient<TActorInterface>(actorTypeName);
+    const actorClient = this.getActorClientProxyBuilder<TActorInterface>(actorTypeName);
     return actorClient.build(fullActorId, actorTypeName);
   }
 
-  getActorByTypeName<TActorInterface>(
-    actorTypeName: string,
-    actorId: string,
-  ): TActorInterface {
+  getActorByTypeName<TActorInterface>(actorTypeName: string, actorId: string): TActorInterface {
     if (this.interfaceToActorTypeNames.has(actorTypeName)) {
       actorTypeName = this.interfaceToActorTypeNames.get(actorTypeName);
     }
@@ -108,7 +86,7 @@ export class DaprActorClient {
     }
 
     const fullActorId = this.getActorId(actorId);
-    const actorClient = this.getActorClient<TActorInterface>(actorTypeName);
+    const actorClient = this.getActorClientProxyBuilder<TActorInterface>(actorTypeName);
     return actorClient.build(fullActorId, actorTypeName) as TActorInterface;
   }
 
@@ -116,7 +94,7 @@ export class DaprActorClient {
     // The input could be an interface so look up the actor type name
     if (this.interfaceToActorTypeNames.has(typeName)) {
       const actorTypeName = this.interfaceToActorTypeNames.get(typeName);
-      if (this.actorClients.has(actorTypeName)) {
+      if (this.actorProxyBuilders.has(actorTypeName)) {
         return actorTypeName;
       } else {
         return `${this.typeNamePrefix}${actorTypeName}`;
@@ -130,18 +108,14 @@ export class DaprActorClient {
   }
 
   contains(actorTypeName: string): boolean {
-    return this.actorClients.has(this.formatActorTypeName(actorTypeName));
+    return this.actorProxyBuilders.has(this.formatActorTypeName(actorTypeName));
   }
 
   private formatActorTypeName(actorTypeName: string): string {
     return actorTypeName.toLowerCase();
   }
 
-  private getActorClient<TActorInterface>(
-    actorTypeName: string,
-  ): ActorProxyBuilder<TActorInterface> {
-    return this.actorClients.get(
-      this.formatActorTypeName(actorTypeName),
-    ) as ActorProxyBuilder<TActorInterface>;
+  private getActorClientProxyBuilder<TActorInterface>(actorTypeName: string): ActorProxyBuilder<TActorInterface> {
+    return this.actorProxyBuilders.get(this.formatActorTypeName(actorTypeName)) as ActorProxyBuilder<TActorInterface>;
   }
 }

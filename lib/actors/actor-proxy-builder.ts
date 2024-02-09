@@ -2,9 +2,10 @@ import { ActorId, CommunicationProtocolEnum, DaprClient } from '@dapr/dapr';
 import ActorClient from '@dapr/dapr/actors/client/ActorClient/ActorClient';
 import Class from '@dapr/dapr/types/Class';
 import { DaprClientOptions } from '@dapr/dapr/types/DaprClientOptions';
+import { Logger } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { DaprContextService } from '../dapr-context-service';
-import { Logger } from '@nestjs/common';
+import { DaprClientCache } from './client-cache';
 
 export class ActorProxyBuilder<T> {
   moduleRef: ModuleRef;
@@ -30,15 +31,16 @@ export class ActorProxyBuilder<T> {
 
     if (args.length == 1) {
       const [daprClient] = args;
-      this.actorClient = new ActorClient(
-        daprClient.options.daprHost,
-        daprClient.options.daprPort,
-        daprClient.options.communicationProtocol,
-        daprClient.options,
-      );
+      this.actorClient = DaprClientCache.getOrCreateActorClientFromClient(daprClient);
     } else {
       const [host, port, communicationProtocol, clientOptions] = args;
-      this.actorClient = new ActorClient(host, port, communicationProtocol, clientOptions);
+      const options: DaprClientOptions = {
+        daprHost: host,
+        daprPort: port,
+        communicationProtocol: communicationProtocol,
+        ...clientOptions,
+      };
+      this.actorClient = DaprClientCache.getOrCreateActorClientFromOptions(options);
     }
   }
 
