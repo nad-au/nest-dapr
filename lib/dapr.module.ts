@@ -64,7 +64,7 @@ export interface DaprModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 }
 
 @Module({
-  providers: [DaprActorClient, NestActorManager, DaprContextService],
+  providers: [DaprActorClient, NestActorManager, DaprContextService, ActorRuntimeService],
   exports: [DaprActorClient, DaprContextService, ActorRuntimeService],
 })
 export class DaprModule {
