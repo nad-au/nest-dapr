@@ -143,10 +143,6 @@ export class NestActorManager {
     };
   }
 
-  private async runInsideContextIfAvailable() {
-    return;
-  }
-
   private async resolveDependencies(moduleRef: ModuleRef, instance: any): Promise<void> {
     const type = instance.constructor;
     try {

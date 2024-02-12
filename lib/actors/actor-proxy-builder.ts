@@ -60,7 +60,7 @@ export class ActorProxyBuilder<T> {
           // The propKey is the method name, and the args are the method arguments
           // If the actor is internally known to this process, we can call the method directly (without going through the sidecar)
           // Note: This can be a bad idea as the actor might be moved to another process or be deactivated
-          // Caution: Calls to actors are current not protected by a locking mechanism internally
+          // Caution: Calls to actors are current not protected by any locking mechanism internally
           if (this.isInternalActor(actorId)) {
             return await this.callInternalActorMethod(actorTypeClassName, actorId, propKey, args);
           } else {
@@ -88,7 +88,6 @@ export class ActorProxyBuilder<T> {
     methodName: string,
     args: any[],
   ): Promise<any> {
-    console.log('calling internal actor method');
     const actorManager = this.actorRuntimeService.getActorManager(actorTypeClassName);
     const requestBody = JSON.stringify(args);
     return await actorManager.invoke(actorId, methodName, Buffer.from(requestBody));
