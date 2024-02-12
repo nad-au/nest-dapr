@@ -44,6 +44,23 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
       this.actorManager.setupReentrancy();
     }
 
+    // Setup the actor client (based on the options provided)
+    if (this.options.actorOptions) {
+      this.daprActorClient.setAllowInternalCalls(this.options.actorOptions?.allowInternalCalls ?? false);
+      this.daprActorClient.setPrefix(
+        this.options.actorOptions?.prefix ?? '',
+        this.options.actorOptions?.delimiter ?? '-',
+      );
+      this.daprActorClient.setTypeNamePrefix(this.options.actorOptions?.typeNamePrefix ?? '');
+      if (this.options.actorOptions?.prefix) {
+        this.logger.log(
+          `Actors will be prefixed with ${this.options.actorOptions?.prefix ?? ''} and delimited with ${
+            this.options.actorOptions?.delimiter ?? '-'
+          }`,
+        );
+      }
+    }
+
     await this.daprServer.actor.init();
 
     this.loadDaprHandlers();
@@ -61,23 +78,6 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     const resRegisteredActors = await this.daprServer.actor.getRegisteredActors();
     if (resRegisteredActors.length > 0) {
       this.logger.log(`Registered Actors: ${resRegisteredActors.join(', ')}`);
-    }
-
-    // Setup the actor client
-    if (this.options.actorOptions) {
-      this.daprActorClient.setPrefix(
-        this.options.actorOptions?.prefix ?? '',
-        this.options.actorOptions?.delimiter ?? '-',
-      );
-      this.daprActorClient.setTypeNamePrefix(this.options.actorOptions?.typeNamePrefix ?? '');
-
-      if (this.options.actorOptions?.prefix) {
-        this.logger.log(
-          `Actors will be prefixed with ${this.options.actorOptions?.prefix ?? ''} and delimited with ${
-            this.options.actorOptions?.delimiter ?? '-'
-          }`,
-        );
-      }
     }
   }
 

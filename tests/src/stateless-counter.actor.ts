@@ -17,14 +17,18 @@ export class StatelessCounterActor extends AbstractActor implements StatelessCou
   counter: number = 0;
 
   async increment(): Promise<void> {
-    const context = this.contextService.get<any>();
-    console.log('context', context);
+    const existingContext = this.contextService.get<any>();
+
+    console.log('existingContext', existingContext);
+    console.log('correlationID', existingContext?.correlationID);
     this.counter++;
   }
 
   async getCounter(): Promise<number> {
-    const context = this.contextService.get<any>();
-    console.log('context', context);
+    const existingContext = this.contextService.get<any>();
+
+    console.log('existingContext', existingContext);
+    console.log('correlationID', existingContext?.correlationID);
     return this.counter;
   }
 }

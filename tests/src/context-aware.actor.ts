@@ -28,10 +28,17 @@ export class ContextAwareActor extends AbstractActor implements ContextAwareActo
     await nested.ping();
 
     const counter = this.client.getActor(StatelessCounterActorInterface, 'counter-1');
+    const previousValue = await counter.getCounter();
 
+    // Increment 3 times
     await counter.increment();
+    await counter.increment();
+    await counter.increment();
+
     const value = await counter.getCounter();
     console.log('counter', value);
+
+    expect(value).toBe(previousValue + 3);
 
     return existingContext?.correlationID;
   }

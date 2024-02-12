@@ -15,8 +15,15 @@ export class DaprActorClient {
   private prefix = '';
   private delimiter = '-';
   private typeNamePrefix = '';
+  private allowInternalCalls: boolean;
 
-  constructor(private readonly moduleRef: ModuleRef, private readonly daprClient: DaprClient) {}
+  constructor(private readonly moduleRef: ModuleRef, private readonly daprClient: DaprClient) {
+    this.allowInternalCalls = process.env.DAPR_ACTOR_ALLOW_INTERNAL_CALLS === 'true';
+  }
+
+  setAllowInternalCalls(allowInternalCalls: boolean): void {
+    this.allowInternalCalls = allowInternalCalls;
+  }
 
   setPrefix(prefix: string, delimiter = '-'): void {
     this.prefix = prefix;
@@ -29,10 +36,9 @@ export class DaprActorClient {
 
   register<T>(actorTypeName: string, actorType: Type<T> | Function, daprClient?: DaprClient): void {
     this.interfaces.set(this.formatActorTypeName(actorTypeName), actorType);
-    this.actorProxyBuilders.set(
-      this.formatActorTypeName(actorTypeName),
-      new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient),
-    );
+    const proxyBuilder = new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient);
+    proxyBuilder.allowInternalCalls = this.allowInternalCalls;
+    this.actorProxyBuilders.set(this.formatActorTypeName(actorTypeName), proxyBuilder);
   }
 
   registerInterface<T>(
@@ -45,10 +51,9 @@ export class DaprActorClient {
     this.interfaceToActorTypeNames.set(interfaceTypeName, actorTypeName);
     this.interfaces.set(this.formatActorTypeName(interfaceTypeName), actorType);
 
-    this.actorProxyBuilders.set(
-      this.formatActorTypeName(interfaceTypeName),
-      new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient),
-    );
+    const proxyBuilder = new ActorProxyBuilder<T>(this.moduleRef, actorType as Class<T>, daprClient ?? this.daprClient);
+    proxyBuilder.allowInternalCalls = this.allowInternalCalls;
+    this.actorProxyBuilders.set(this.formatActorTypeName(interfaceTypeName), proxyBuilder);
   }
 
   getActorId(actorId: string): ActorId {

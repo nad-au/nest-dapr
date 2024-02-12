@@ -35,6 +35,9 @@ import { DaprContextProvider } from '../../lib/dapr.module';
           actorScanInterval: '30s',
         },
       },
+      actorOptions: {
+        allowInternalCalls: true,
+      },
       contextProvider: DaprContextProvider.NestCLS,
     }),
   ],

@@ -105,33 +105,46 @@ export class NestActorManager {
     ActorManager.prototype.callActorMethod = async function (actorId: ActorId, methodName: string, data: any) {
       // Try catch, log and rethrow any errors
       try {
-        return await clsService.run(async () => {
-          contextService.setIdIfNotDefined();
-          // Try to extract the context from the data object
-          // This method will remove any context from the data object (destructive)
-          const context = NestActorManager.extractContext(data);
-          // If we have found a context object, set it in the CLS
-          if (context) {
-            contextService.set(context);
-            // Attempt to set the correlation ID from the context
-            const correlationId = context[DAPR_CORRELATION_ID_KEY] ?? randomUUID();
-            if (correlationId) {
-              contextService.setCorrelationId(correlationId);
-            }
-          }
-
+        if (clsService.isActive()) {
           if (invokeWrapperFn) {
             return await invokeWrapperFn(actorId, methodName, data, originalCallActor.bind(this));
           } else {
             return await originalCallActor.bind(this)(actorId, methodName, data);
           }
-        });
+        } else {
+          // Create a new context for this actor method call
+          return await clsService.run(async () => {
+            contextService.setIdIfNotDefined();
+            // Try to extract the context from the data object
+            // This method will remove any context from the data object (destructive)
+            const context = NestActorManager.extractContext(data);
+            // If we have found a context object, set it in the CLS
+            if (context) {
+              contextService.set(context);
+              // Attempt to set the correlation ID from the context
+              const correlationId = context[DAPR_CORRELATION_ID_KEY] ?? randomUUID();
+              if (correlationId) {
+                contextService.setCorrelationId(correlationId);
+              }
+            }
+
+            if (invokeWrapperFn) {
+              return await invokeWrapperFn(actorId, methodName, data, originalCallActor.bind(this));
+            } else {
+              return await originalCallActor.bind(this)(actorId, methodName, data);
+            }
+          });
+        }
       } catch (error) {
         Logger.error(`Error invoking actor method ${actorId}/${methodName}`);
         Logger.error(error);
         throw error;
       }
     };
+  }
+
+  private async runInsideContextIfAvailable() {
+    return;
   }
 
   private async resolveDependencies(moduleRef: ModuleRef, instance: any): Promise<void> {
@@ -162,30 +175,35 @@ export class NestActorManager {
     }
   }
   private static extractContext(data: any): any {
-    if (!data) return undefined;
-    // The context object should always be the last item in the array
-    if (Array.isArray(data)) {
-      const lastItem = data[data.length - 1];
-      if (lastItem['$t'] === 'ctx') {
-        // Remove this item from the array
-        data.pop();
-        return lastItem;
+    try {
+      if (!data) return undefined;
+      // The context object should always be the last item in the array
+      if (Array.isArray(data) && data.length > 0) {
+        const lastItem = data[data.length - 1];
+        if (lastItem['$t'] === 'ctx') {
+          // Remove this item from the array
+          data.pop();
+          return lastItem;
+        }
       }
+      // Perhaps the context is the entire object?
+      if (data['$t'] === 'ctx') {
+        // Copy the context object and remove it from the data object
+        const context = Object.assign({}, data);
+        data = undefined;
+        return context;
+      }
+      // Allow embedding the context as a property
+      if (data['$ctx']) {
+        const context = Object.assign({}, data['$ctx']);
+        data['$ctx'] = undefined;
+        return context;
+      }
+      return undefined;
+    } catch (error) {
+      console.error(error);
+      return undefined;
     }
-    // Perhaps the context is the entire object?
-    if (data['$t'] === 'ctx') {
-      // Copy the context object and remove it from the data object
-      const context = Object.assign({}, data);
-      data = undefined;
-      return context;
-    }
-    // Allow embedding the context as a property
-    if (data['$ctx']) {
-      const context = Object.assign({}, data['$ctx']);
-      data['$ctx'] = undefined;
-      return context;
-    }
-    return undefined;
   }
 }
 

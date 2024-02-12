@@ -51,6 +51,7 @@ describe('DaprActorContext', () => {
 
       const actor1 = daprActorClient.getActor(ContextAwareActorInterface, 'context-1');
 
+      // This actor also calls other actors
       const correlationID = await actor1.run();
       expect(correlationID).toBe(context.correlationID);
 

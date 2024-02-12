@@ -26,6 +26,7 @@ export interface DaprModuleActorOptions {
   prefix?: string;
   delimiter?: string;
   typeNamePrefix?: string;
+  allowInternalCalls?: boolean; // Allow actors to call internally within the same process
 }
 
 export enum DaprContextProvider {

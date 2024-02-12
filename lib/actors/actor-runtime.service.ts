@@ -53,10 +53,14 @@ export class ActorRuntimeService {
   }
 
   public hasActor<TActorInterface>(actorType: Type<TActorInterface> | Function, actorId: string) {
-    const typeName = actorType.name ?? actorType.constructor.name;
-    // Resolve the actor type name from the interface type name/or actor type name
-    const actorTypeName = this.actorClient.getActorTypeName(typeName);
-    return this.hasActorByTypeName(actorTypeName, actorId);
+    try {
+      const typeName = actorType.name ?? actorType.constructor.name;
+      // Resolve the actor type name from the interface type name/or actor type name
+      const actorTypeName = this.actorClient.getActorTypeName(typeName);
+      return this.hasActorByTypeName(actorTypeName, actorId);
+    } catch (error) {
+      return false;
+    }
   }
 
   public hasActorByTypeName(actorTypeName: string, actorId: string) {
