@@ -50,18 +50,11 @@ export class StatefulActor extends AbstractActor {
       } else {
         // We have obtained the raw value from the state store, but we need to convert it to the correct type
         // Lets see if the type has a `fromJSON` and a `toJSON` method
-        if (property.serializable) {
-          // Assume that the type has a `fromJSON` and a `toJSON` methods (loose typing)
-          let instance: IState;
-          if (typeof property.defaultValue === 'function') {
-            instance = property.defaultValue();
-          } else {
-            // New up a new instance of the type (call the constructor)
-            // Assuming that the type has a default constructor
-            instance = this.createInstance(property.type);
-          }
-          this[property.key] = instance.fromJSON(rawValue) ?? instance;
+        const instance = this.createInstanceFromProperty(property, rawValue);
+        if (instance !== undefined) {
+          this[property.key] = instance;
         } else {
+          // The user may think this is typed, but its just the raw value
           this[property.key] = rawValue;
         }
       }
@@ -96,6 +89,51 @@ export class StatefulActor extends AbstractActor {
       }
       // There is an existing item that we are unable to obtain
       throw e;
+    }
+  }
+
+  private createInstanceFromProperty(property: StateProperty, rawValue?: any) {
+    // This method is a little complex, but we're trying to be a nice to the end user as possible
+    try {
+      if (property.serializable) {
+        let instance: IState;
+        if (typeof property.defaultValue === 'function') {
+          instance = property.defaultValue();
+        } else {
+          // New up a new instance of the type (call the constructor)
+          // Assuming that the type has a default constructor
+          instance = this.createInstance(property.type);
+        }
+        if (instance.fromJSON) {
+          this[property.key] = instance.fromJSON(rawValue) ?? instance;
+        } else {
+          this[property.key] = instance;
+          // For each of the raw values properties, set the instance property of the same name
+          for (const key of Object.keys(rawValue)) {
+            instance[key] = rawValue[key];
+          }
+        }
+      } else {
+        // We don't know if the type is serializable, so lets just try to new up an instance
+        // This is the safest default the user is likely to want.
+        let instance: any;
+        if (typeof property.defaultValue === 'function') {
+          instance = property.defaultValue();
+        } else if (property.type) {
+          // New up a new instance of the type (call the constructor)
+          // Assuming that the type has a default constructor
+          instance = this.createInstance(property.type);
+        }
+        if (instance !== undefined) {
+          // For each of the raw values properties, set the instance property of the same name
+          for (const key of Object.keys(rawValue)) {
+            instance[key] = rawValue[key];
+          }
+          return instance;
+        }
+      }
+    } catch (e) {
+      return undefined;
     }
   }
 
