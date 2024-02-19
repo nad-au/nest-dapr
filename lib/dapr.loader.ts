@@ -63,6 +63,8 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
 
     await this.daprServer.actor.init();
 
+    this.daprServer.daprServer.getServerImpl();
+
     this.loadDaprHandlers();
 
     // If the dapr server port is 0, then we will assume that the server is not to be started
@@ -72,6 +74,21 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     }
 
     this.logger.log('Starting Dapr server');
+
+    if (this.options.catchErrors) {
+      // We need to add error handling middleware to the Dapr server
+      const server = this.daprServer.daprServer.getServer(); // Express JS
+      if (server) {
+        server.use((err, req, res, next) => {
+          // Catch any errors, log them and return a 500
+          if (err) {
+            this.logger.error(err, err.stack, 'DaprServer');
+            res.status(500).send(err);
+          }
+        });
+      }
+    }
+
     await this.daprServer.start();
     this.logger.log('Dapr server started');
 

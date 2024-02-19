@@ -20,6 +20,7 @@ export interface DaprModuleOptions {
   actorOptions?: DaprModuleActorOptions;
   disabled?: boolean;
   contextProvider?: DaprContextProvider;
+  catchErrors?: boolean;
 }
 
 export interface DaprModuleActorOptions {
