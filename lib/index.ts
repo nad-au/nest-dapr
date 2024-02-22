@@ -16,7 +16,7 @@ import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprPubSub, DaprPubSubMetadata } from './dapr-pubsub.decorator';
 import { DaprLoader } from './dapr.loader';
-import { DaprModule } from './dapr.module';
+import { DaprContextProvider, DaprModule } from './dapr.module';
 
 export {
   DAPR_BINDING_METADATA,
@@ -35,6 +35,7 @@ export {
   DaprModule,
   DaprActorClient,
   DaprContextService,
+  DaprContextProvider,
   ActorRuntimeService,
   DaprClientCache,
   StatefulActor,
