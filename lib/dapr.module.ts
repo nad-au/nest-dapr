@@ -2,6 +2,7 @@ import { CommunicationProtocolEnum, DaprClient, DaprPubSubStatusEnum, DaprServer
 import { DaprClientOptions } from '@dapr/dapr/types/DaprClientOptions';
 import { DynamicModule, Module, ModuleMetadata, Provider, Scope, Type } from '@nestjs/common';
 import { DiscoveryModule, Reflector } from '@nestjs/core';
+import { ClsModule } from 'nestjs-cls';
 import { ActorRuntimeService } from './actors/actor-runtime.service';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { NestActorManager } from './actors/nest-actor-manager';
@@ -66,6 +67,7 @@ export interface DaprModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 }
 
 @Module({
+  imports: [ClsModule],
   providers: [DaprActorClient, NestActorManager, DaprContextService, ActorRuntimeService],
   exports: [DaprActorClient, DaprContextService, ActorRuntimeService],
 })
@@ -74,7 +76,7 @@ export class DaprModule {
     return {
       global: true,
       module: DaprModule,
-      imports: [DiscoveryModule],
+      imports: [DiscoveryModule, ClsModule],
       providers: [
         createOptionsProvider(options),
         {
