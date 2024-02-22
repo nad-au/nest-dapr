@@ -17,7 +17,7 @@ export interface DaprModuleOptions {
   serverPort?: string;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
-  onError?: (name: string, topicName: string, error: any) => DaprPubSubStatusEnum;
+  onPubSubError?: (name: string, topicName: string, error: any) => DaprPubSubStatusEnum;
   actorOptions?: DaprModuleActorOptions;
   disabled?: boolean;
   contextProvider?: DaprContextProvider;
