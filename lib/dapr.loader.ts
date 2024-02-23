@@ -137,7 +137,8 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     if (!daprPubSubMetadata) {
       return;
     }
-    const { name, topicName, route } = daprPubSubMetadata;
+    const name = daprPubSubMetadata.name ?? this.options.pubsubOptions?.defaultName;
+    const { topicName, route } = daprPubSubMetadata;
 
     this.logger.log(`Subscribing to Dapr: ${name}, Topic: ${topicName}${route ? ' on route ' + route : ''}`);
     await this.daprServer.pubsub.subscribe(
@@ -157,8 +158,8 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
         } catch (err) {
           this.logger.error(err, `Error in pubsub handler ${topicName}`);
           // If there is an error handler then use it.
-          if (this.options.onPubSubError) {
-            const response = this.options.onPubSubError(name, topicName, err);
+          if (this.options.pubsubOptions?.onError) {
+            const response = this.options.pubsubOptions?.onError(name, topicName, err);
             if (response == DaprPubSubStatusEnum.RETRY) {
               this.logger.log(`Retrying pubsub handler ${topicName} operation`);
             } else if (response == DaprPubSubStatusEnum.DROP) {

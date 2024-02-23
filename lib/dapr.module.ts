@@ -17,8 +17,8 @@ export interface DaprModuleOptions {
   serverPort?: string;
   communicationProtocol?: CommunicationProtocolEnum;
   clientOptions?: DaprClientOptions;
-  onPubSubError?: (name: string, topicName: string, error: any) => DaprPubSubStatusEnum;
   actorOptions?: DaprModuleActorOptions;
+  pubsubOptions?: DaprModulePubSubOptions;
   disabled?: boolean;
   contextProvider?: DaprContextProvider;
   catchErrors?: boolean;
@@ -29,6 +29,11 @@ export interface DaprModuleActorOptions {
   delimiter?: string;
   typeNamePrefix?: string;
   allowInternalCalls?: boolean; // Allow actors to call internally within the same process
+}
+
+export interface DaprModulePubSubOptions {
+  defaultName?: string;
+  onError?: (name: string, topicName: string, error: any) => DaprPubSubStatusEnum;
 }
 
 export enum DaprContextProvider {

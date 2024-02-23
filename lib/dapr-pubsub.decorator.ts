@@ -25,16 +25,6 @@ export interface DaprPubSubMetadata {
  * Dapr pubsub decorator.
  * Subscribes to Dapr pubsub topics.
  *
- * @param name name of pubsub component
- * @param topicName topic name to subscribe
+ * @param options name, topic and route (optional)
  */
-export const DaprPubSub = (
-  name: string,
-  topicName: string,
-  route?: string,
-): MethodDecorator =>
-  SetMetadata(DAPR_PUBSUB_METADATA, {
-    name,
-    topicName,
-    route,
-  } as DaprPubSubMetadata);
+export const DaprPubSub = (options: DaprPubSubMetadata): MethodDecorator => SetMetadata(DAPR_PUBSUB_METADATA, options);
