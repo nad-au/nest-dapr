@@ -145,8 +145,13 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
       topicName,
       async (data: any) => {
         try {
-          // The first argument will be the data
-          await instance[methodKey].call(instance, data);
+          // The first argument will be the data.
+          // The method invoked can be a void method or return a DaprPubSubStatusEnum value
+          const result = await instance[methodKey].call(instance, data);
+          // If the result is a DaprPubSubStatusEnum then return it, otherwise assume success
+          if (result && result in DaprPubSubStatusEnum) {
+            return result;
+          }
           // If no exception has occurred, then return success
           return DaprPubSubStatusEnum.SUCCESS;
         } catch (err) {
