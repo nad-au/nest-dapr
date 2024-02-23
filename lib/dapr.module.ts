@@ -9,6 +9,7 @@ import { NestActorManager } from './actors/nest-actor-manager';
 import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
+import { DaprPubSubClient } from './pubsub/dapr-pubsub-client.service';
 
 export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 
@@ -103,9 +104,18 @@ export class DaprModule {
         DaprLoader,
         DaprMetadataAccessor,
         DaprContextService,
+        DaprActorClient,
+        {
+          provide: DaprPubSubClient,
+          scope: Scope.DEFAULT,
+          inject: [DAPR_MODULE_OPTIONS_TOKEN, DaprClient],
+          useFactory: (options: DaprModuleOptions, daprClient: DaprClient) => {
+            return new DaprPubSubClient(options, daprClient);
+          },
+        },
         Reflector,
       ],
-      exports: [DaprClient],
+      exports: [DaprClient, DaprPubSubClient, DAPR_MODULE_OPTIONS_TOKEN],
     };
   }
 
@@ -137,10 +147,19 @@ export class DaprModule {
         DaprLoader,
         DaprMetadataAccessor,
         DaprContextService,
+        DaprActorClient,
+        {
+          provide: DaprPubSubClient,
+          scope: Scope.DEFAULT,
+          inject: [DAPR_MODULE_OPTIONS_TOKEN, DaprClient],
+          useFactory: (options: DaprModuleOptions, daprClient: DaprClient) => {
+            return new DaprPubSubClient(options, daprClient);
+          },
+        },
         Reflector,
         ...(options.extraProviders || []),
       ],
-      exports: [DaprClient],
+      exports: [DaprClient, DaprPubSubClient, DAPR_MODULE_OPTIONS_TOKEN],
     };
   }
 

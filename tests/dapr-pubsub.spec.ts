@@ -4,6 +4,7 @@ import { DaprClient, DaprPubSubStatusEnum, DaprServer } from '@dapr/dapr';
 import { INestApplication } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { sleep, waitForArrayLengthToBe } from './test.utils';
+import { DaprPubSubClient } from '../lib';
 
 // To run inside Dapr use:
 // dapr run --app-id nest-dapr --dapr-http-port 3500 --app-port 3001 --log-level debug -- npm run test -- pubsub
@@ -12,6 +13,7 @@ describe('DaprPubSub', () => {
   let app: INestApplication;
   let daprServer: DaprServer;
   let daprClient: DaprClient;
+  let pubsubClient: DaprPubSubClient;
 
   const runId = randomUUID();
   let messages = [];
@@ -26,10 +28,12 @@ describe('DaprPubSub', () => {
     await app.listen(3000);
     daprServer = app.get<DaprServer>(DaprServer);
     daprClient = testingModule.get(DaprClient);
+    pubsubClient = testingModule.get(DaprPubSubClient);
     expect(daprClient).toBeDefined();
+    expect(pubsubClient).toBeDefined();
 
     // Subscribe to the pubsub events
-    await daprServer.pubsub.subscribe('redis-pubsub', 'events', async (data: any) => {
+    await daprServer.pubsub.subscribe('pubsub', 'events', async (data: any) => {
       console.log('Received message', data);
       if (data.run !== runId) {
         // This must be a message from a previous test run
@@ -58,11 +62,7 @@ describe('DaprPubSub', () => {
   describe('PubSub', () => {
     it('should publish an event', async () => {
       const message = { id: randomUUID(), time: new Date().toISOString(), run: runId };
-      await daprClient.pubsub.publish('redis-pubsub', 'events', message, {
-        metadata: {
-          source: 'test-1',
-        },
-      });
+      await pubsubClient.publish('test-1', 'events', message);
       await waitForArrayLengthToBe(messages, 1);
       expect(messages.length).toEqual(1);
     });
@@ -80,11 +80,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await daprClient.pubsub.publish('redis-pubsub', 'events', firstMessage, {
-        metadata: {
-          partitionKey: 'test-2',
-        },
-      });
+      await pubsubClient.publish('test-2', 'events', firstMessage);
 
       // Wait for the array to contain 4 messages
       await waitForArrayLengthToBe(messages, 3);
@@ -95,11 +91,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await daprClient.pubsub.publish('redis-pubsub', 'events', secondMessage, {
-        metadata: {
-          partitionKey: 'test-2',
-        },
-      });
+      await pubsubClient.publish('test-2', 'events', secondMessage);
       await waitForArrayLengthToBe(messages, 4);
       // We expect 4 messages, as the first message should be processed 3 times
       expect(messages.length).toEqual(4);
@@ -114,11 +106,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await daprClient.pubsub.publish('redis-pubsub', 'events', firstMessage, {
-        metadata: {
-          partitionKey: 'test-3',
-        },
-      });
+      await pubsubClient.publish('test-3', 'events', firstMessage);
       // The retry policy is 3 times, so the total messages should be 4 (1+3 retries)
       await waitForArrayLengthToBe(messages, 4);
       expect(messages.length).toBe(4);
