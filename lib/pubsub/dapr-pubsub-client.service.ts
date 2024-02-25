@@ -1,5 +1,5 @@
 import { DaprClient } from '@dapr/dapr';
-import { Inject, Injectable, OnApplicationShutdown } from '@nestjs/common';
+import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { Subject, Subscription, toArray } from 'rxjs';
 import { bufferTime } from 'rxjs/operators';
 import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from '../dapr.module';
@@ -7,19 +7,32 @@ import { PublishMessage } from './publish.message';
 
 @Injectable()
 export class DaprPubSubClient implements OnApplicationShutdown {
+  private readonly logger = new Logger(DaprPubSubClient.name);
   private readonly defaultName: string;
   private readonly buffer: Subject<PublishMessage> = new Subject<PublishMessage>();
   private subscription: Subscription;
   private readonly bufferSize: number = 10; // in messages
   private readonly bufferTimeSpan: number = 1000; // in milliseconds
+  private onError: (message: PublishMessage, error: any) => void;
+
   constructor(
     @Inject(DAPR_MODULE_OPTIONS_TOKEN)
     private readonly options: DaprModuleOptions,
     private readonly daprClient: DaprClient,
   ) {
     this.defaultName = this.options.pubsubOptions?.defaultName ?? 'pubsub';
-    // this.defaultName = 'pubsub';
     this.setupBufferSubscription();
+  }
+
+  registerErrorHandler(handler: (message: PublishMessage, error: any) => void) {
+    this.onError = handler;
+  }
+
+  async handleError(message: PublishMessage, error: any) {
+    if (this.onError) {
+      await this.onError(message, error);
+    }
+    this.logger.error(`Error publishing message to ${message.name}:${message.topic}`, error);
   }
 
   async onApplicationShutdown(signal?: string) {
@@ -91,12 +104,19 @@ export class DaprPubSubClient implements OnApplicationShutdown {
         await this.publishDirectly(name, topic, messages[0].payload, producerId, messages[0].metadata);
         continue;
       }
-      await this.daprClient.pubsub.publishBulk(
-        name,
-        topic,
-        messages.map((m) => m.payload),
-        producerId ? { metadata: { partitionKey: producerId } } : undefined,
-      );
+      try {
+        await this.daprClient.pubsub.publishBulk(
+          name,
+          topic,
+          messages.map((m) => m.payload),
+          producerId ? { metadata: { partitionKey: producerId } } : undefined,
+        );
+      } catch (error) {
+        // Handle each message individually as its own error
+        for (const message of messages) {
+          await this.handleError(message, error);
+        }
+      }
     }
   }
 
@@ -108,25 +128,29 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     metadata?: any,
     fireAndForget = false,
   ) {
-    if (!name) name = this.defaultName;
-    // Fire and forget will run the publish operation without waiting for a response (in a setTimeout)
-    const options = {};
-    if (metadata) {
-      options['metadata'] = metadata;
-    }
-    if (producerId) {
-      // Merge the partitionKey into the metadata if it exists, otherwise create a new metadata object
-      options['metadata'] = { partitionKey: producerId, ...metadata };
-    }
+    try {
+      if (!name) name = this.defaultName;
+      // Fire and forget will run the publish operation without waiting for a response (in a setTimeout)
+      const options = {};
+      if (metadata) {
+        options['metadata'] = metadata;
+      }
+      if (producerId) {
+        // Merge the partitionKey into the metadata if it exists, otherwise create a new metadata object
+        options['metadata'] = { partitionKey: producerId, ...metadata };
+      }
 
-    if (fireAndForget) {
-      setTimeout(async () => {
-        await this.daprClient.pubsub.publish(name, topic, payload, options);
-      });
-      return;
-    }
+      if (fireAndForget) {
+        setTimeout(async () => {
+          await this.daprClient.pubsub.publish(name, topic, payload, options);
+        });
+        return;
+      }
 
-    await this.daprClient.pubsub.publish(name, topic, payload, options);
+      await this.daprClient.pubsub.publish(name, topic, payload, options);
+    } catch (error) {
+      await this.handleError({ producerId, name, topic, payload, metadata }, error);
+    }
   }
 
   async publish(
