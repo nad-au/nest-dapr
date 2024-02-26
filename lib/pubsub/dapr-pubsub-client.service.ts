@@ -13,7 +13,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
   private subscription: Subscription;
   private readonly bufferSize: number = 10; // in messages
   private readonly bufferTimeSpan: number = 1000; // in milliseconds
-  private onError: (messages: PublishMessage[], error: any) => void;
+  private onError: (messages: PublishMessage[], error: Error) => void;
 
   constructor(
     @Inject(DAPR_MODULE_OPTIONS_TOKEN)
@@ -24,11 +24,11 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     this.setupBufferSubscription();
   }
 
-  registerErrorHandler(handler: (messages: PublishMessage[], error: any) => void) {
+  registerErrorHandler(handler: (messages: PublishMessage[], error: Error) => void) {
     this.onError = handler;
   }
 
-  protected async handleError(messages: PublishMessage[], error: any) {
+  protected async handleError(messages: PublishMessage[], error: Error) {
     if (this.onError) {
       await this.onError(messages, error);
     }
