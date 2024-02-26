@@ -13,7 +13,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
   private subscription: Subscription;
   private readonly bufferSize: number = 10; // in messages
   private readonly bufferTimeSpan: number = 1000; // in milliseconds
-  private onError: (message: PublishMessage, error: any) => void;
+  private onError: (messages: PublishMessage[], error: any) => void;
 
   constructor(
     @Inject(DAPR_MODULE_OPTIONS_TOKEN)
@@ -24,15 +24,15 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     this.setupBufferSubscription();
   }
 
-  registerErrorHandler(handler: (message: PublishMessage, error: any) => void) {
+  registerErrorHandler(handler: (messages: PublishMessage[], error: any) => void) {
     this.onError = handler;
   }
 
-  async handleError(message: PublishMessage, error: any) {
+  protected async handleError(messages: PublishMessage[], error: any) {
     if (this.onError) {
-      await this.onError(message, error);
+      await this.onError(messages, error);
     }
-    this.logger.error(`Error publishing message to ${message.name}:${message.topic}`, error);
+    this.logger.error(`Error publishing ${messages.length ? 'message' : 'messages'} to pubsub`, error);
   }
 
   async onApplicationShutdown(signal?: string) {
@@ -65,7 +65,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     await flushPromise;
   }
 
-  private setupBufferSubscription() {
+  protected setupBufferSubscription() {
     if (this.subscription) {
       this.subscription.unsubscribe();
     }
@@ -78,7 +78,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
       });
   }
 
-  private async publishBulkDirectly(messages: PublishMessage[]) {
+  protected async publishBulkDirectly(messages: PublishMessage[]) {
     // If there is only one message, we can publish it directly
     if (messages.length === 1) {
       const message = messages[0];
@@ -112,15 +112,12 @@ export class DaprPubSubClient implements OnApplicationShutdown {
           producerId ? { metadata: { partitionKey: producerId } } : undefined,
         );
       } catch (error) {
-        // Handle each message individually as its own error
-        for (const message of messages) {
-          await this.handleError(message, error);
-        }
+        await this.handleError(messages, error);
       }
     }
   }
 
-  private async publishDirectly(
+  protected async publishDirectly(
     name: string,
     topic: string,
     payload: any,
@@ -149,7 +146,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
 
       await this.daprClient.pubsub.publish(name, topic, payload, options);
     } catch (error) {
-      await this.handleError({ producerId, name, topic, payload, metadata }, error);
+      await this.handleError([{ producerId, name, topic, payload, metadata }], error);
     }
   }
 
@@ -190,5 +187,38 @@ export class DaprPubSubClient implements OnApplicationShutdown {
 
     // Publish directly
     await this.publishDirectly(name, topic, payload, producerId, true);
+  }
+
+  async publishBulk(name: string, producerId: string, topic: string, payloads: any[], metadata?: any): Promise<void>;
+  async publishBulk(producerId: string, topic: string, payloads: any[], metadata?: any): Promise<void>;
+  async publishBulk(producerId: string, topic: string, payloads: any[]): Promise<void>;
+  async publishBulk(
+    ...args: [string, string, string, any[], any?] | [string, string, any[]] | [string, string, any[], any?]
+  ) {
+    let name: string;
+    let producerId: string;
+    let topic: string;
+    let payloads: any[];
+    let metadata: any;
+
+    if (args.length === 5) {
+      [name, producerId, topic, payloads, metadata] = args;
+    } else if (args.length === 4) {
+      [producerId, topic, payloads, metadata] = args as [string, string, any[], any?];
+      name = this.defaultName;
+    } else if (args.length === 3) {
+      [producerId, topic, payloads] = args;
+      name = this.defaultName;
+    }
+    if (!name) name = this.defaultName;
+
+    // If there is only one message, we can publish it directly
+    if (payloads.length === 1) {
+      await this.publishDirectly(name, topic, payloads[0], producerId, metadata);
+      return;
+    }
+    for (const payload of payloads) {
+      this.buffer.next({ name, producerId, topic, payload, metadata });
+    }
   }
 }
