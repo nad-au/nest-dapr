@@ -1,27 +1,26 @@
 import { DaprClient } from '@dapr/dapr';
-import { Inject, Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
+import { Injectable, Logger, OnApplicationShutdown } from '@nestjs/common';
 import { Subject, Subscription, toArray } from 'rxjs';
 import { bufferTime } from 'rxjs/operators';
-import { DAPR_MODULE_OPTIONS_TOKEN, DaprModuleOptions } from '../dapr.module';
 import { PublishMessage } from './publish.message';
 
 @Injectable()
 export class DaprPubSubClient implements OnApplicationShutdown {
   private readonly logger = new Logger(DaprPubSubClient.name);
-  private readonly defaultName: string;
-  private readonly buffer: Subject<PublishMessage> = new Subject<PublishMessage>();
+
+  private defaultName = 'pubsub';
   private subscription: Subscription;
+  private readonly buffer: Subject<PublishMessage> = new Subject<PublishMessage>();
   private readonly bufferSize: number = 10; // in messages
   private readonly bufferTimeSpan: number = 1000; // in milliseconds
   private onError: (messages: PublishMessage[], error: Error) => void;
 
-  constructor(
-    @Inject(DAPR_MODULE_OPTIONS_TOKEN)
-    private readonly options: DaprModuleOptions,
-    private readonly daprClient: DaprClient,
-  ) {
-    this.defaultName = this.options.pubsubOptions?.defaultName ?? 'pubsub';
+  constructor(private readonly daprClient: DaprClient) {
     this.setupBufferSubscription();
+  }
+
+  setDefaultName(name: string) {
+    this.defaultName = name;
   }
 
   registerErrorHandler(handler: (messages: PublishMessage[], error: Error) => void) {

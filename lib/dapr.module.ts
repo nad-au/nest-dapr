@@ -105,17 +105,10 @@ export class DaprModule {
         DaprMetadataAccessor,
         DaprContextService,
         DaprActorClient,
-        {
-          provide: DaprPubSubClient,
-          scope: Scope.DEFAULT,
-          inject: [DAPR_MODULE_OPTIONS_TOKEN, DaprClient],
-          useFactory: (options: DaprModuleOptions, daprClient: DaprClient) => {
-            return new DaprPubSubClient(options, daprClient);
-          },
-        },
+        DaprPubSubClient,
         Reflector,
       ],
-      exports: [DaprClient, DaprPubSubClient, DAPR_MODULE_OPTIONS_TOKEN],
+      exports: [DaprClient, DaprPubSubClient, DaprContextService, ActorRuntimeService, DaprActorClient],
     };
   }
 
@@ -148,18 +141,11 @@ export class DaprModule {
         DaprMetadataAccessor,
         DaprContextService,
         DaprActorClient,
-        {
-          provide: DaprPubSubClient,
-          scope: Scope.DEFAULT,
-          inject: [DAPR_MODULE_OPTIONS_TOKEN, DaprClient],
-          useFactory: (options: DaprModuleOptions, daprClient: DaprClient) => {
-            return new DaprPubSubClient(options, daprClient);
-          },
-        },
+        DaprPubSubClient,
         Reflector,
         ...(options.extraProviders || []),
       ],
-      exports: [DaprClient, DaprPubSubClient, DAPR_MODULE_OPTIONS_TOKEN],
+      exports: [DaprClient, DaprPubSubClient, DaprContextService, ActorRuntimeService, DaprActorClient],
     };
   }
 

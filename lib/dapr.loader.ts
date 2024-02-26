@@ -10,6 +10,7 @@ import { NestActorManager } from './actors/nest-actor-manager';
 import { DaprContextService } from './dapr-context-service';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DAPR_MODULE_OPTIONS_TOKEN, DaprContextProvider, DaprModuleOptions } from './dapr.module';
+import { DaprPubSubClient } from './pubsub/dapr-pubsub-client.service';
 
 @Injectable()
 export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown {
@@ -25,6 +26,7 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     private readonly daprActorClient: DaprActorClient,
     private readonly moduleRef: ModuleRef,
     private readonly contextService: DaprContextService,
+    private readonly pubSubClient: DaprPubSubClient,
     private readonly actorManager: NestActorManager,
   ) {}
 
@@ -42,6 +44,10 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     }
     if (this.options.clientOptions?.actor?.reentrancy?.enabled) {
       this.actorManager.setupReentrancy();
+    }
+
+    if (this.options.pubsubOptions?.defaultName) {
+      this.pubSubClient.setDefaultName(this.options.pubsubOptions.defaultName);
     }
 
     // Setup the actor client (based on the options provided)
