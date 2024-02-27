@@ -4,4 +4,5 @@ export interface PublishMessage {
   topic: string;
   payload: any;
   metadata?: any;
+  contentType?: string;
 }

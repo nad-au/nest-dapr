@@ -81,7 +81,15 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     // If there is only one message, we can publish it directly
     if (messages.length === 1) {
       const message = messages[0];
-      await this.publishDirectly(message.name, message.topic, message.payload, message.producerId, message.metadata);
+      await this.publishDirectly(
+        message.name,
+        message.topic,
+        message.payload,
+        message.producerId,
+        message.metadata,
+        false,
+        message.contentType,
+      );
       return;
     }
 
@@ -100,15 +108,24 @@ export class DaprPubSubClient implements OnApplicationShutdown {
       const messages = grouped[key];
       // If there is only 1 message, we can publish it directly
       if (messages.length === 1) {
-        await this.publishDirectly(name, topic, messages[0].payload, producerId, messages[0].metadata);
+        await this.publishDirectly(
+          name,
+          topic,
+          messages[0].payload,
+          producerId,
+          messages[0].metadata,
+          false,
+          messages[0].contentType,
+        );
         continue;
       }
       try {
+        const contentType = messages[0].contentType ?? 'application/json';
         await this.daprClient.pubsub.publishBulk(
           name,
           topic,
           messages.map((m) => m.payload),
-          producerId ? { metadata: { partitionKey: producerId } } : undefined,
+          producerId ? { metadata: { partitionKey: producerId }, contentType } : undefined,
         );
       } catch (error) {
         await this.handleError(messages, error);
@@ -123,11 +140,15 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     producerId?: string,
     metadata?: any,
     fireAndForget = false,
+    contentType?: string,
   ) {
     try {
       if (!name) name = this.defaultName;
+      if (!contentType) contentType = 'application/json';
       // Fire and forget will run the publish operation without waiting for a response (in a setTimeout)
-      const options = {};
+      const options = {
+        contentType,
+      };
       if (metadata) {
         options['metadata'] = metadata;
       }
@@ -156,12 +177,23 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     payload: any,
     buffer: boolean,
     metadata?: any,
+    contentType?: string,
   ): Promise<void>;
-  async publish(producerId: string, topic: string, payload: any, buffer: boolean, metadata?: any): Promise<void>;
+  async publish(
+    producerId: string,
+    topic: string,
+    payload: any,
+    buffer: boolean,
+    metadata?: any,
+    contentType?: string,
+  ): Promise<void>;
   async publish(producerId: string, topic: string, payload: any): Promise<void>;
   // Implementation that covers both overloads
   async publish(
-    ...args: [string, string, string, any, boolean, any?] | [string, string, any] | [string, string, any, boolean, any?]
+    ...args:
+      | [string, string, string, any, boolean, any?, string?]
+      | [string, string, any, string?]
+      | [string, string, any, boolean, any?, string?]
   ) {
     let name: string;
     let producerId: string;
@@ -169,55 +201,75 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     let payload: any;
     let buffer: boolean;
     let metadata: any;
+    let contentType: string;
 
-    if (args.length === 6) {
-      [name, producerId, topic, payload, buffer, metadata] = args;
+    if (args.length === 7) {
+      [name, producerId, topic, payload, buffer, metadata, contentType] = args;
     } else {
-      [producerId, topic, payload, buffer, metadata] = args;
+      [producerId, topic, payload, buffer, metadata, contentType] = args;
       name = this.defaultName;
     }
     if (!name) name = this.defaultName;
+    if (!contentType) contentType = 'application/json';
 
     // If we are buffering messages (default), they will be published in bulk by a rxjs buffer
     if (buffer === undefined || buffer) {
-      this.buffer.next({ name, producerId, topic, payload, metadata });
+      this.buffer.next({ name, producerId, topic, payload, metadata, contentType });
       return;
     }
 
     // Publish directly
-    await this.publishDirectly(name, topic, payload, producerId, true);
+    await this.publishDirectly(name, topic, payload, producerId, metadata, true, contentType);
   }
 
-  async publishBulk(name: string, producerId: string, topic: string, payloads: any[], metadata?: any): Promise<void>;
-  async publishBulk(producerId: string, topic: string, payloads: any[], metadata?: any): Promise<void>;
+  async publishBulk(
+    name: string,
+    producerId: string,
+    topic: string,
+    payloads: any[],
+    metadata?: any,
+    contentType?: string,
+  ): Promise<void>;
+  async publishBulk(
+    producerId: string,
+    topic: string,
+    payloads: any[],
+    metadata?: any,
+    contentType?: string,
+  ): Promise<void>;
   async publishBulk(producerId: string, topic: string, payloads: any[]): Promise<void>;
   async publishBulk(
-    ...args: [string, string, string, any[], any?] | [string, string, any[]] | [string, string, any[], any?]
+    ...args:
+      | [string, string, string, any[], any?, string?]
+      | [string, string, any[], any?, string?]
+      | [string, string, any[]]
   ) {
     let name: string;
     let producerId: string;
     let topic: string;
     let payloads: any[];
     let metadata: any;
+    let contentType: string;
 
-    if (args.length === 5) {
-      [name, producerId, topic, payloads, metadata] = args;
-    } else if (args.length === 4) {
-      [producerId, topic, payloads, metadata] = args as [string, string, any[], any?];
+    if (args.length === 6) {
+      [name, producerId, topic, payloads, metadata, contentType] = args;
+    } else if (args.length === 5) {
+      [producerId, topic, payloads, metadata, contentType] = args as [string, string, any[], any?, string?];
       name = this.defaultName;
-    } else if (args.length === 3) {
-      [producerId, topic, payloads] = args;
+    } else {
+      [producerId, topic, payloads] = args as [string, string, any[]];
       name = this.defaultName;
     }
     if (!name) name = this.defaultName;
+    if (!contentType) contentType = 'application/json';
 
     // If there is only one message, we can publish it directly
     if (payloads.length === 1) {
-      await this.publishDirectly(name, topic, payloads[0], producerId, metadata);
+      await this.publishDirectly(name, topic, payloads[0], producerId, metadata, true, contentType);
       return;
     }
     for (const payload of payloads) {
-      this.buffer.next({ name, producerId, topic, payload, metadata });
+      this.buffer.next({ name, producerId, topic, payload, metadata, contentType });
     }
   }
 }
