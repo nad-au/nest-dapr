@@ -159,11 +159,17 @@ export class DaprPubSubClient implements OnApplicationShutdown {
 
       if (fireAndForget) {
         setTimeout(async () => {
-          await this.daprClient.pubsub.publish(name, topic, payload, options);
+          // This will run in the background and not await a response
+          try {
+            await this.daprClient.pubsub.publish(name, topic, payload, options);
+          } catch (error) {
+            await this.handleError([{ producerId, name, topic, payload, metadata }], error);
+          }
         });
         return;
       }
 
+      // This will await the sidecar response
       await this.daprClient.pubsub.publish(name, topic, payload, options);
     } catch (error) {
       await this.handleError([{ producerId, name, topic, payload, metadata }], error);
