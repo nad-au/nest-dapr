@@ -121,12 +121,24 @@ export class DaprPubSubClient implements OnApplicationShutdown {
       }
       try {
         const contentType = messages[0].contentType ?? 'application/json';
-        await this.daprClient.pubsub.publishBulk(
+        const response = await this.daprClient.pubsub.publishBulk(
           name,
           topic,
           messages.map((m) => m.payload),
           producerId ? { metadata: { partitionKey: producerId }, contentType } : undefined,
         );
+        if (response.failedMessages) {
+          const failedMessages = response.failedMessages.map((m, i) => {
+            return {
+              name,
+              topic,
+              payload: m.message.event,
+              metadata: m.message.metadata,
+              contentType: m.message.contentType ?? contentType,
+            };
+          });
+          await this.handleError(failedMessages, response.failedMessages[0].error);
+        }
       } catch (error) {
         await this.handleError(messages, error);
       }
@@ -161,7 +173,10 @@ export class DaprPubSubClient implements OnApplicationShutdown {
         setTimeout(async () => {
           // This will run in the background and not await a response
           try {
-            await this.daprClient.pubsub.publish(name, topic, payload, options);
+            const response = await this.daprClient.pubsub.publish(name, topic, payload, options);
+            if (response.error) {
+              throw response.error;
+            }
           } catch (error) {
             await this.handleError([{ producerId, name, topic, payload, metadata }], error);
           }
@@ -170,7 +185,10 @@ export class DaprPubSubClient implements OnApplicationShutdown {
       }
 
       // This will await the sidecar response
-      await this.daprClient.pubsub.publish(name, topic, payload, options);
+      const response = await this.daprClient.pubsub.publish(name, topic, payload, options);
+      if (response.error) {
+        throw response.error;
+      }
     } catch (error) {
       await this.handleError([{ producerId, name, topic, payload, metadata }], error);
     }
