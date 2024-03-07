@@ -29,10 +29,10 @@ export class DaprPubSubClient implements OnApplicationShutdown {
   }
 
   protected async handleError(messages: PublishMessage[], error: Error) {
+    this.logger.error(`Error publishing ${messages.length ? 'message' : 'messages'} to pubsub`, error);
     if (this.onError) {
       await this.onError(messages, error);
     }
-    this.logger.error(`Error publishing ${messages.length ? 'message' : 'messages'} to pubsub`, error);
   }
 
   async onApplicationShutdown(signal?: string) {
@@ -130,6 +130,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
           producerId ? { metadata: { partitionKey: producerId }, contentType } : undefined,
         );
         if (response.failedMessages) {
+          const error = response.failedMessages[0]?.error ?? new Error('Unable to publish message');
           const failedMessages = response.failedMessages.map((m, i) => {
             const messageId = this.getMessageId(m.message.event, m.message.entryID);
             return {
@@ -141,7 +142,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
               contentType: m.message.contentType ?? contentType,
             };
           });
-          await this.handleError(failedMessages, response.failedMessages[0].error);
+          await this.handleError(failedMessages, error);
         }
       } catch (error) {
         await this.handleError(messages, error);
@@ -179,23 +180,26 @@ export class DaprPubSubClient implements OnApplicationShutdown {
           // This will run in the background and not await a response
           try {
             const response = await this.daprClient.pubsub.publish(name, topic, payload, options);
-            if (response.error) {
+            if (response !== undefined && response.error) {
               throw response.error;
             }
           } catch (error) {
             await this.handleError([{ id: id ?? randomUUID(), producerId, name, topic, payload, metadata }], error);
+            return false;
           }
         });
-        return;
+        return true;
       }
 
       // This will await the sidecar response
       const response = await this.daprClient.pubsub.publish(name, topic, payload, options);
-      if (response.error) {
+      if (response !== undefined && response.error) {
         throw response.error;
       }
+      return true;
     } catch (error) {
       await this.handleError([{ id: id ?? randomUUID(), producerId, name, topic, payload, metadata }], error);
+      return false;
     }
   }
 
@@ -208,7 +212,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     buffer: boolean,
     metadata?: any,
     contentType?: string,
-  ): Promise<void>;
+  ): Promise<boolean>;
   async publish(
     id: string,
     producerId: string,
@@ -217,8 +221,8 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     buffer: boolean,
     metadata?: any,
     contentType?: string,
-  ): Promise<void>;
-  async publish(id: string, producerId: string, topic: string, payload: any): Promise<void>;
+  ): Promise<boolean>;
+  async publish(id: string, producerId: string, topic: string, payload: any): Promise<boolean>;
   // Implementation that covers both overloads
   async publish(
     ...args:
@@ -251,7 +255,16 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     }
 
     // Publish directly
-    await this.publishDirectly(id ?? randomUUID(), name, topic, payload, producerId, metadata, true, contentType);
+    return await this.publishDirectly(
+      id ?? randomUUID(),
+      name,
+      topic,
+      payload,
+      producerId,
+      metadata,
+      true,
+      contentType,
+    );
   }
 
   async publishBulk(
@@ -261,15 +274,15 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     payloads: any[],
     metadata?: any,
     contentType?: string,
-  ): Promise<void>;
+  ): Promise<boolean>;
   async publishBulk(
     producerId: string,
     topic: string,
     payloads: any[],
     metadata?: any,
     contentType?: string,
-  ): Promise<void>;
-  async publishBulk(producerId: string, topic: string, payloads: any[]): Promise<void>;
+  ): Promise<boolean>;
+  async publishBulk(producerId: string, topic: string, payloads: any[]): Promise<boolean>;
   async publishBulk(
     ...args:
       | [string, string, string, any[], any?, string?]
@@ -298,8 +311,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
     // If there is only one message, we can publish it directly
     if (payloads.length === 1) {
       const messageId = this.getMessageId(payloads[0]);
-      await this.publishDirectly(messageId, name, topic, payloads[0], producerId, metadata, true, contentType);
-      return;
+      return await this.publishDirectly(messageId, name, topic, payloads[0], producerId, metadata, true, contentType);
     }
     for (const payload of payloads) {
       this.buffer.next({
@@ -312,6 +324,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
         contentType,
       });
     }
+    return true;
   }
 
   private getMessageId(payload: any, defaultValue?: string): string {
