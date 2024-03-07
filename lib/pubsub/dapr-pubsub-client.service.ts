@@ -129,7 +129,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
           messages.map((m) => m.payload),
           producerId ? { metadata: { partitionKey: producerId }, contentType } : undefined,
         );
-        if (response.failedMessages) {
+        if (response !== undefined && response.failedMessages && response.failedMessages.length > 0) {
           const error = response.failedMessages[0]?.error ?? new Error('Unable to publish message');
           const failedMessages = response.failedMessages.map((m, i) => {
             const messageId = this.getMessageId(m.message.event, m.message.entryID);
