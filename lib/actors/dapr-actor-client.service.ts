@@ -57,6 +57,9 @@ export class DaprActorClient {
   }
 
   getActorId(actorId: string): ActorId {
+    if (!actorId) {
+      throw new Error('Actor id must be provided');
+    }
     if (this.prefix) {
       return new ActorId(`${this.prefix}${this.delimiter ?? '-'}${actorId}`);
     }
@@ -64,6 +67,9 @@ export class DaprActorClient {
   }
 
   getActor<TActorInterface>(actorType: Type<TActorInterface> | Function, actorId: string): TActorInterface {
+    if (!actorId) {
+      throw new Error('Actor id must be provided');
+    }
     const typeName = actorType.name ?? actorType.constructor.name;
     // Resolve the actor type name from the interface type name/or actor type name
     const actorTypeName = this.getActorTypeName(typeName);
@@ -80,6 +86,9 @@ export class DaprActorClient {
   }
 
   getActorByTypeName<TActorInterface>(actorTypeName: string, actorId: string): TActorInterface {
+    if (!actorId) {
+      throw new Error('Actor id must be provided');
+    }
     if (this.interfaceToActorTypeNames.has(actorTypeName)) {
       actorTypeName = this.interfaceToActorTypeNames.get(actorTypeName);
     }

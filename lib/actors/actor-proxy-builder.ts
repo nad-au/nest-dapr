@@ -51,6 +51,9 @@ export class ActorProxyBuilder<T> {
   }
 
   build(actorId: ActorId, actorTypeName?: string): T {
+    if (!actorId) {
+      throw new Error('Actor id must be provided');
+    }
     const actorTypeClassName = actorTypeName ?? this.actorTypeClass.name;
 
     const handler = {
@@ -99,6 +102,9 @@ export class ActorProxyBuilder<T> {
     methodName: string,
     args: any[],
   ): Promise<any> {
+    if (!actorId) {
+      throw new Error('Actor id must be provided');
+    }
     const originalBody = args.length > 0 ? args : null;
     // As we are invoking this method via the sidecar we want to prepare the body and inject it with any context/correlation ID
     const body = await this.prepareBody(this.daprContextService, args, originalBody);
