@@ -6,9 +6,9 @@ import {
   DAPR_PUBSUB_METADATA,
   DAPR_ACTOR_EVENT_METADATA,
 } from './constants';
+import { DaprActorOnEventMetadata } from './dapr-actor-on-event.decorator';
 import { DaprActorMetadata } from './dapr-actor.decorator';
 import { DaprBindingMetadata } from './dapr-binding.decorator';
-import { DaprActorEventMetadata } from './dapr-actor-on-event.decorator';
 import { DaprPubSubMetadata } from './dapr-pubsub.decorator';
 
 @Injectable()
@@ -27,7 +27,7 @@ export class DaprMetadataAccessor {
     return this.reflector.get<DaprActorMetadata>(DAPR_ACTOR_METADATA, target);
   }
 
-  getDaprEventHandlerMetadata(target: Type<unknown>): DaprActorEventMetadata<any>[] | undefined {
+  getDaprEventHandlerMetadata(target: Type<unknown>): DaprActorOnEventMetadata<any>[] | undefined {
     // Circumvent a crash that comes from reflect-metadata if it is
     // given a non-object non-function target to reflect upon.
     if (!target || (typeof target !== 'function' && typeof target !== 'object')) {
