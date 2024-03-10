@@ -7,9 +7,11 @@ import { ActorRuntimeService } from './actors/actor-runtime.service';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { NestActorManager } from './actors/nest-actor-manager';
 import { DaprContextService } from './dapr-context-service';
+import { DaprEventSubscriberLoader } from './dapr-event-subscriber.loader';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
 import { DaprPubSubClient } from './pubsub/dapr-pubsub-client.service';
+import { DaprEventEmitter } from './dapr-event-emitter.service';
 
 export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 
@@ -73,9 +75,9 @@ export interface DaprModuleAsyncOptions extends Pick<ModuleMetadata, 'imports'> 
 }
 
 @Module({
-  imports: [ClsModule],
-  providers: [DaprActorClient, NestActorManager, DaprContextService, ActorRuntimeService],
-  exports: [DaprActorClient, DaprContextService, ActorRuntimeService],
+  imports: [ClsModule, DiscoveryModule],
+  providers: [DaprActorClient, NestActorManager, DaprContextService, DaprEventSubscriberLoader, ActorRuntimeService],
+  exports: [DaprActorClient, DaprContextService, DaprEventSubscriberLoader, ActorRuntimeService],
 })
 export class DaprModule {
   static register(options?: DaprModuleOptions): DynamicModule {
@@ -103,12 +105,22 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        DaprEventSubscriberLoader,
         DaprContextService,
         DaprActorClient,
         DaprPubSubClient,
+        DaprEventEmitter,
         Reflector,
       ],
-      exports: [DaprClient, DaprPubSubClient, DaprContextService, ActorRuntimeService, DaprActorClient],
+      exports: [
+        DaprClient,
+        DaprPubSubClient,
+        DaprContextService,
+        ActorRuntimeService,
+        DaprActorClient,
+        DaprEventSubscriberLoader,
+        DaprEventEmitter,
+      ],
     };
   }
 
@@ -139,13 +151,23 @@ export class DaprModule {
         },
         DaprLoader,
         DaprMetadataAccessor,
+        DaprEventSubscriberLoader,
         DaprContextService,
         DaprActorClient,
         DaprPubSubClient,
+        DaprEventEmitter,
         Reflector,
         ...(options.extraProviders || []),
       ],
-      exports: [DaprClient, DaprPubSubClient, DaprContextService, ActorRuntimeService, DaprActorClient],
+      exports: [
+        DaprClient,
+        DaprPubSubClient,
+        DaprContextService,
+        ActorRuntimeService,
+        DaprActorClient,
+        DaprEventSubscriberLoader,
+        DaprEventEmitter,
+      ],
     };
   }
 

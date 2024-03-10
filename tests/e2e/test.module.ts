@@ -6,6 +6,7 @@ import { CounterActor } from '../src/counter.actor';
 import { CacheService } from '../src/cache.service';
 import { CounterController } from './counter.controller';
 import { ContextAwareActor } from '../src/context-aware.actor';
+import { StatelessPubSubActor } from '../src/stateless-pubsub.actor';
 import { ClsModule } from 'nestjs-cls';
 import { DaprContextProvider } from '../../lib/dapr.module';
 
@@ -42,6 +43,6 @@ import { DaprContextProvider } from '../../lib/dapr.module';
     }),
   ],
   controllers: [CounterController],
-  providers: [CacheService, StatelessCounterActor, CounterActor, ContextAwareActor],
+  providers: [CacheService, StatelessCounterActor, CounterActor, ContextAwareActor, StatelessPubSubActor],
 })
 export class TestModule {}
