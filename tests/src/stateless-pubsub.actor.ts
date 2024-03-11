@@ -13,6 +13,7 @@ export class PubSubEvent {
   type: string;
   producerId: string;
   id: string;
+  otherIds: string[];
   time: string;
   run: string;
 }
@@ -40,7 +41,7 @@ export class StatelessPubSubActor extends AbstractActor implements StatelessPubS
   }
 
   @DaprActorOnEvent<PubSubEvent>('com.example.event', (payload) => payload.producerId)
-  @DaprActorOnEvent<PubSubEvent>('com.example.*', (payload) => payload.producerId)
+  @DaprActorOnEvent<PubSubEvent>('com.example.*', (payload) => payload.otherIds)
   async handleEvent(payload?: PubSubEvent): Promise<void> {
     this.messages.push(payload);
     console.log('payload', payload);

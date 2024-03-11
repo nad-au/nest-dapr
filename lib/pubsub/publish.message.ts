@@ -1,6 +1,5 @@
 export interface PublishMessage {
-  id: string;
-  name: string;
+  pubSubName: string;
   producerId?: string;
   topic: string;
   payload: any;

@@ -62,7 +62,7 @@ describe('DaprPubSub', () => {
   describe('PubSub', () => {
     it('should publish an event', async () => {
       const message = { type: 'event', id: randomUUID(), time: new Date().toISOString(), run: runId };
-      await pubsubClient.publish('message-1', 'test-1', 'events', message);
+      await pubsubClient.publish('pubsub', 'test-1', 'events', message);
       await waitForArrayLengthToBe(messages, 1);
       expect(messages.length).toEqual(1);
     });
@@ -81,7 +81,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await pubsubClient.publish('message-2', 'test-2', 'events', firstMessage);
+      await pubsubClient.publish('pubsub', 'test-2', 'events', firstMessage);
 
       // Wait for the array to contain 4 messages
       await waitForArrayLengthToBe(messages, 3);
@@ -93,7 +93,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await pubsubClient.publish('message-3', 'test-2', 'events', secondMessage);
+      await pubsubClient.publish('pubsub', 'test-2', 'events', secondMessage);
       await waitForArrayLengthToBe(messages, 4);
       // We expect 4 messages, as the first message should be processed 3 times
       expect(messages.length).toEqual(4);
@@ -109,7 +109,7 @@ describe('DaprPubSub', () => {
         time: new Date().toISOString(),
         run: runId,
       };
-      await pubsubClient.publish('message-4', 'test-3', 'events', firstMessage);
+      await pubsubClient.publish('pubsub', 'test-3', 'events', firstMessage);
       // The retry policy is 3 times, so the total messages should be 4 (1+3 retries)
       await waitForArrayLengthToBe(messages, 4);
       expect(messages.length).toBe(4);

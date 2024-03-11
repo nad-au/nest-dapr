@@ -73,9 +73,10 @@ describe('DaprPubSubActor', () => {
         producerId: 'test-1',
         id: randomUUID(),
         time: new Date().toISOString(),
+        otherIds: ['test-1', 'test-1'],
         run: runId,
       };
-      await pubsubClient.publish('message-1', 'test-1', 'events', message);
+      await pubsubClient.publish('pubsub', 'test-1', 'events', message);
       await waitForArrayLengthToBe(messages, 1);
       expect(messages.length).toEqual(1);
 
@@ -84,7 +85,7 @@ describe('DaprPubSubActor', () => {
 
       const actor = daprActorClient.getActor(StatelessPubSubActorInterface, 'test-1');
       const actorMessages = await actor.getMessages();
-      expect(actorMessages.length).toEqual(3);
+      expect(actorMessages.length).toEqual(4);
     });
   });
 

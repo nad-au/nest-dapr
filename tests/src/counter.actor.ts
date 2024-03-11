@@ -1,5 +1,5 @@
 import { IState, StatefulActor } from '../../lib/actors/stateful.actor';
-import { DaprActor, DaprContextService, State } from '../../lib';
+import { DaprActor, State } from '../../lib';
 import { Inject } from '@nestjs/common';
 import { CacheService } from './cache.service';
 
@@ -29,9 +29,6 @@ export class CounterState implements IState {
 export class CounterActor extends StatefulActor implements CounterActorInterface {
   @Inject(CacheService)
   private readonly cacheService: CacheService;
-
-  @Inject()
-  private readonly contextService: DaprContextService;
 
   @State({
     defaultValue: () => new CounterState(),

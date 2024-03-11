@@ -27,6 +27,7 @@ import { DaprContextProvider } from '../../lib/dapr.module';
         logger: {
           level: LogLevel.Verbose,
         },
+        isKeepAlive: true,
         actor: {
           reentrancy: {
             enabled: true,
