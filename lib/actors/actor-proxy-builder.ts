@@ -51,7 +51,7 @@ export class ActorProxyBuilder<T> {
   }
 
   build(actorId: ActorId, actorTypeName?: string): T {
-    if (!actorId) {
+    if (actorId === undefined) {
       throw new Error('Actor id must be provided');
     }
     const actorTypeClassName = actorTypeName ?? this.actorTypeClass.name;
@@ -102,7 +102,7 @@ export class ActorProxyBuilder<T> {
     methodName: string,
     args: any[],
   ): Promise<any> {
-    if (!actorId) {
+    if (actorId === undefined) {
       throw new Error('Actor id must be provided');
     }
     const originalBody = args.length > 0 ? args : null;
