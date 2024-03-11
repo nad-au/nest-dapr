@@ -1,7 +1,7 @@
 import ActorId from '@dapr/dapr/actors/ActorId';
 import ActorClient from '@dapr/dapr/actors/client/ActorClient/ActorClient';
-import ActorStateManager from '@dapr/dapr/actors/runtime/ActorStateManager';
 import * as DaprAbstractActor from '@dapr/dapr/actors/runtime/AbstractActor';
+import ActorStateManager from '@dapr/dapr/actors/runtime/ActorStateManager';
 import StateProvider from '@dapr/dapr/actors/runtime/StateProvider';
 import DaprClient from '@dapr/dapr/implementation/Client/DaprClient';
 import { Logger } from '@dapr/dapr/logger/Logger';

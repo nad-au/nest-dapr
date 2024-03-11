@@ -71,7 +71,7 @@ export class NestActorManager {
       body: any,
       reentrancyId?: string,
     ) {
-      const urlSafeId = encodeURIComponent(actorId.getId());
+      const urlSafeId = actorId.getURLSafeId();
       const result = await this.client.execute(`/actors/${actorType}/${urlSafeId}/method/${methodName}`, {
         method: 'POST', // we always use POST calls for Invoking (ref: https://github.com/dapr/js-sdk/pull/137#discussion_r772636068)
         body,
