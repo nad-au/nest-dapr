@@ -66,7 +66,7 @@ export class StatefulActor extends AbstractActor {
     for (const property of this.stateProperties) {
       let value = this[property.key];
       // If the property is serializable, then we need to call the `toJSON` method
-      if (property.serializable) {
+      if (value !== undefined && property.serializable) {
         const instance = value as IState;
         value = instance.toJSON();
       }

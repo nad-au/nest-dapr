@@ -13,7 +13,7 @@ export interface DaprActorOnEventMetadata<T> {
   /**
    * Function to obtain the Actor/Producer ID from the event payload.
    */
-  actorId: (payload: T) => string;
+  actorId: (payload: T) => string | string[];
 
   /**
    * Ignore errors.
@@ -36,7 +36,7 @@ export type DaprActorEventType = string | symbol | string[] | symbol[];
  */
 export function DaprActorOnEvent<T>(
   event: DaprActorEventType,
-  actorId: (payload: T) => string,
+  actorId: (payload: T) => string | string[],
   ignoreErrors?: boolean,
 ): MethodDecorator {
   const decoratorFactory = (target: object, key?: any, descriptor?: any) => {

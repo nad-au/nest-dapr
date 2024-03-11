@@ -73,10 +73,15 @@ export class DaprEventSubscriberLoader implements OnApplicationBootstrap, OnAppl
       eventMetadata.event,
       async (data: any) => {
         try {
-          const actorId = eventMetadata.actorId(data);
-          const actorType = actorMetadata.interfaceType.name ?? actorMetadata.interfaceType.constructor.name;
-          const actor = this.actorClient.getActorByTypeName(actorType, actorId);
-          return await actor[methodKey].call(actor, data);
+          let actorIds = eventMetadata.actorId(data);
+          if (!Array.isArray(actorIds)) {
+            actorIds = [actorIds];
+          }
+          for (const id of actorIds) {
+            const actorType = actorMetadata.interfaceType.name ?? actorMetadata.interfaceType.constructor.name;
+            const actor = this.actorClient.getActorByTypeName(actorType, id);
+            await actor[methodKey].call(actor, data);
+          }
         } catch (e) {
           this.logger.error(e);
           // The default is to throw the error
