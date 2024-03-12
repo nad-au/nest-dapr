@@ -126,7 +126,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
           pubSubName,
           topic,
           messages.map((m) => m.payload),
-          producerId ? { metadata: { partitionKey: producerId }, contentType } : undefined,
+          producerId ? { metadata: { partitionKey: producerId, PartitionKey: producerId }, contentType } : undefined,
         );
         if (response !== undefined && response.failedMessages && response.failedMessages.length > 0) {
           const error = response.failedMessages[0]?.error ?? new Error('Unable to publish message');
@@ -134,6 +134,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
             return {
               pubSubName: pubSubName,
               topic,
+              producerId,
               payload: m.message.event,
               metadata: m.message.metadata,
               contentType: m.message.contentType ?? contentType,
@@ -168,7 +169,7 @@ export class DaprPubSubClient implements OnApplicationShutdown {
       }
       if (producerId) {
         // Merge the partitionKey into the metadata if it exists, otherwise create a new metadata object
-        options['metadata'] = { partitionKey: producerId, ...metadata };
+        options['metadata'] = { partitionKey: producerId, PartitionKey: producerId, ...metadata };
       }
 
       if (fireAndForget) {
