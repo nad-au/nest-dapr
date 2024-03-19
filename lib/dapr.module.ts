@@ -7,11 +7,11 @@ import { ActorRuntimeService } from './actors/actor-runtime.service';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
 import { NestActorManager } from './actors/nest-actor-manager';
 import { DaprContextService } from './dapr-context-service';
+import { DaprEventEmitter } from './dapr-event-emitter.service';
 import { DaprEventSubscriberLoader } from './dapr-event-subscriber.loader';
 import { DaprMetadataAccessor } from './dapr-metadata.accessor';
 import { DaprLoader } from './dapr.loader';
 import { DaprPubSubClient } from './pubsub/dapr-pubsub-client.service';
-import { DaprEventEmitter } from './dapr-event-emitter.service';
 
 export const DAPR_MODULE_OPTIONS_TOKEN = 'DAPR_MODULE_OPTIONS_TOKEN';
 
@@ -24,7 +24,12 @@ export interface DaprModuleOptions {
   pubsubOptions?: DaprModulePubSubOptions;
   disabled?: boolean;
   contextProvider?: DaprContextProvider;
+  logging?: DaprModuleLoggingOptions;
   catchErrors?: boolean;
+}
+
+export interface DaprModuleLoggingOptions {
+  enabled: boolean;
 }
 
 export interface DaprModuleActorOptions {

@@ -6,15 +6,18 @@ import { Injectable, Logger, Scope, Type } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { DAPR_CORRELATION_ID_KEY, DaprContextService } from '../dapr-context-service';
-import { DaprModuleActorOptions } from '../dapr.module';
+import { DaprModuleOptions } from '../dapr.module';
 
 @Injectable()
 export class NestActorManager {
   setup(
     moduleRef: ModuleRef,
-    options: DaprModuleActorOptions,
+    options: DaprModuleOptions,
     onActivateFn?: (actorId: ActorId, instance: AbstractActor) => Promise<void>,
   ) {
+    // Logging is enabled by default
+    const isLoggingEnabled = options?.logging?.enabled ?? true;
+
     // The original create actor method
     const originalCreateActor = ActorManager.prototype.createActor;
     const resolveDependencies = this.resolveDependencies;
@@ -23,12 +26,17 @@ export class NestActorManager {
     ActorManager.prototype.createActor = async function (actorId: ActorId) {
       // Call the original createActor method
       const instance = (await originalCreateActor.bind(this)(actorId)) as AbstractActor;
-      if (options?.typeNamePrefix) {
+      if (options?.actorOptions?.typeNamePrefix) {
         // This is where we override the Actor Type Name at runtime
         // This means it may differ from the instance/ctor name.
         // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-ignore
         instance['actorType'] = `${options.typeNamePrefix}${instance.actorType}`;
+      }
+
+      if (isLoggingEnabled) {
+        const actorTypeName = this.actorCls.name ?? instance.constructor.name;
+        Logger.verbose(`Activating actor ${actorId}`, actorTypeName);
       }
 
       // Attempt to resolve dependencies from the Nest Dependency Injection container
@@ -38,7 +46,7 @@ export class NestActorManager {
           await onActivateFn(actorId, instance);
         }
       } catch (error) {
-        console.error(error);
+        Logger.error(error);
         throw error;
       }
       return instance;
@@ -54,6 +62,11 @@ export class NestActorManager {
           return;
         }
         await originalDeactivateActor.bind(this)(actorId);
+
+        if (isLoggingEnabled) {
+          const actorTypeName = this.actorCls.name;
+          Logger.verbose(`Deactivating actor ${actorId}`, actorTypeName);
+        }
       } catch (error) {
         Logger.error(`Error deactivating actor ${actorId}`);
         Logger.error(error);
@@ -61,7 +74,7 @@ export class NestActorManager {
     };
   }
 
-  setupReentrancy() {
+  setupReentrancy(options: DaprModuleOptions) {
     // Here we are patching the ActorClientHTTP to support reentrancy using the `Dapr-Reentrancy-Id` header
     // All subsequent calls in a request chain must use the same correlation/reentrancy ID for the reentrancy to work
     ActorClientHTTP.prototype.invoke = async function (
@@ -84,6 +97,7 @@ export class NestActorManager {
   }
 
   setupCSLWrapper(
+    options: DaprModuleOptions,
     contextService: DaprContextService,
     invokeWrapperFn?: (
       actorId: ActorId,
@@ -98,6 +112,9 @@ export class NestActorManager {
       throw new Error(`Unable to resolve a CLS from the NestJS DI container`);
     }
 
+    // Logging is enabled by default
+    const isLoggingEnabled = options?.logging?.enabled ?? true;
+
     // The original invoke actor method call
     const originalCallActor = ActorManager.prototype.callActorMethod;
 
@@ -105,6 +122,11 @@ export class NestActorManager {
     ActorManager.prototype.callActorMethod = async function (actorId: ActorId, methodName: string, data: any) {
       // Try catch, log and rethrow any errors
       try {
+        if (isLoggingEnabled) {
+          const actorTypeName = this.actorCls.name;
+          Logger.verbose(`Invoking ${actorId}/${methodName}`, actorTypeName);
+        }
+
         if (clsService.isActive()) {
           if (invokeWrapperFn) {
             return await invokeWrapperFn(actorId, methodName, data, originalCallActor.bind(this));
@@ -166,7 +188,7 @@ export class NestActorManager {
         }
       }
     } catch (error) {
-      console.error(error);
+      Logger.error(error);
       throw error;
     }
   }
@@ -197,7 +219,7 @@ export class NestActorManager {
       }
       return undefined;
     } catch (error) {
-      console.error(error);
+      Logger.error(error);
       return undefined;
     }
   }

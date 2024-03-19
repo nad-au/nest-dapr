@@ -37,13 +37,13 @@ export class DaprLoader implements OnApplicationBootstrap, OnApplicationShutdown
     }
 
     // Hook into the Dapr Actor Manager
-    this.actorManager.setup(this.moduleRef, this.options.actorOptions);
+    this.actorManager.setup(this.moduleRef, this.options);
     // Setup CLS/ALS for async context propagation
     if (this.options.contextProvider !== DaprContextProvider.None) {
-      this.actorManager.setupCSLWrapper(this.contextService);
+      this.actorManager.setupCSLWrapper(this.options, this.contextService);
     }
     if (this.options.clientOptions?.actor?.reentrancy?.enabled) {
-      this.actorManager.setupReentrancy();
+      this.actorManager.setupReentrancy(this.options);
     }
 
     if (this.options.pubsubOptions?.defaultName) {
