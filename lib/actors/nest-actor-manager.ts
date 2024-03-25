@@ -47,6 +47,9 @@ export class NestActorManager {
         }
       } catch (error) {
         Logger.error(error);
+        if (error.stack) {
+          Logger.error(error.stack);
+        }
         throw error;
       }
       return instance;
@@ -70,6 +73,9 @@ export class NestActorManager {
       } catch (error) {
         Logger.error(`Error deactivating actor ${actorId}`);
         Logger.error(error);
+        if (error.stack) {
+          Logger.error(error.stack);
+        }
       }
     };
   }
@@ -160,6 +166,9 @@ export class NestActorManager {
       } catch (error) {
         Logger.error(`Error invoking actor method ${actorId}/${methodName}`);
         Logger.error(error);
+        if (error.stack) {
+          Logger.error(error.stack);
+        }
         throw error;
       }
     };
@@ -189,6 +198,9 @@ export class NestActorManager {
       }
     } catch (error) {
       Logger.error(error);
+      if (error.stack) {
+        Logger.error(error.stack);
+      }
       throw error;
     }
   }
