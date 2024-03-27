@@ -62,6 +62,10 @@ export class NestActorManager {
     // Patch existing methods to ensure they do not allow the main host to crash with an unhandled exception
     this.patchDeactivate(options);
     this.patchToSupportSerializableError(options);
+    if (isLoggingEnabled) {
+      // Catch and log any unhandled exceptions
+      this.catchAndLogUnhandledExceptions();
+    }
   }
 
   setupReentrancy(options: DaprModuleOptions) {
@@ -156,6 +160,17 @@ export class NestActorManager {
         throw error;
       }
     };
+  }
+
+  private catchAndLogUnhandledExceptions() {
+    // Handle uncaught exceptions
+    process.on('uncaughtException', (err) => {
+      console.error('Unhandled Exception:', err);
+    });
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+    });
   }
 
   private patchToSupportSerializableError(options: DaprModuleOptions) {
