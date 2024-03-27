@@ -40,6 +40,9 @@ import { DaprContextProvider } from '../../lib/dapr.module';
       actorOptions: {
         allowInternalCalls: true,
       },
+      logging: {
+        enabled: true,
+      },
       contextProvider: DaprContextProvider.NestCLS,
     }),
   ],

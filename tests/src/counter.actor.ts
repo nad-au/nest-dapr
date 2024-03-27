@@ -9,7 +9,7 @@ export abstract class CounterActorInterface {
 }
 
 export class CounterState implements IState {
-  counter: number;
+  counter: number = 0;
 
   fromJSON(json: any) {
     this.counter = json.counter;
@@ -54,6 +54,6 @@ export class CounterActor extends StatefulActor implements CounterActorInterface
   }
 
   async getCounter(): Promise<number> {
-    return this.state.counter;
+    return this.state.counter ?? 0;
   }
 }

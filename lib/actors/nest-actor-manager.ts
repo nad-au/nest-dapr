@@ -2,11 +2,15 @@ import { randomUUID } from 'crypto';
 import { AbstractActor, ActorId } from '@dapr/dapr';
 import ActorClientHTTP from '@dapr/dapr/actors/client/ActorClient/ActorClientHTTP';
 import ActorManager from '@dapr/dapr/actors/runtime/ActorManager';
+import ActorRuntime from '@dapr/dapr/actors/runtime/ActorRuntime';
+import HttpStatusCode from '@dapr/dapr/enum/HttpStatusCode.enum';
+import HTTPServerActor from '@dapr/dapr/implementation/Server/HTTPServer/actor';
 import { Injectable, Logger, Scope, Type } from '@nestjs/common';
 import { ModuleRef } from '@nestjs/core';
 import { InstanceWrapper } from '@nestjs/core/injector/instance-wrapper';
 import { DAPR_CORRELATION_ID_KEY, DaprContextService } from '../dapr-context-service';
 import { DaprModuleOptions } from '../dapr.module';
+import { SerializableError } from './serializable-error';
 
 @Injectable()
 export class NestActorManager {
@@ -55,29 +59,9 @@ export class NestActorManager {
       return instance;
     };
 
-    // Prevent deactive from throwing an unhandled exception
-    const originalDeactivateActor = ActorManager.prototype.deactivateActor;
-    ActorManager.prototype.deactivateActor = async function (actorId: ActorId) {
-      try {
-        // If the actor is not known to this server then just return without error
-        // There is no need to throw an error here
-        if (!this.actors.has(actorId.getId())) {
-          return;
-        }
-        await originalDeactivateActor.bind(this)(actorId);
-
-        if (isLoggingEnabled) {
-          const actorTypeName = this.actorCls.name;
-          Logger.verbose(`Deactivating actor ${actorId}`, actorTypeName);
-        }
-      } catch (error) {
-        Logger.error(`Error deactivating actor ${actorId}`);
-        Logger.error(error);
-        if (error.stack) {
-          Logger.error(error.stack);
-        }
-      }
-    };
+    // Patch existing methods to ensure they do not allow the main host to crash with an unhandled exception
+    this.patchDeactivate(options);
+    this.patchToSupportSerializableError(options);
   }
 
   setupReentrancy(options: DaprModuleOptions) {
@@ -170,6 +154,70 @@ export class NestActorManager {
           Logger.error(error.stack);
         }
         throw error;
+      }
+    };
+  }
+
+  private patchToSupportSerializableError(options: DaprModuleOptions) {
+    // eslint-disable-next-line
+    // @ts-ignore
+    const originalHandlerMethod = HTTPServerActor.prototype.handlerMethod;
+    if (!originalHandlerMethod) return;
+
+    // eslint-disable-next-line
+    // @ts-ignore
+    HTTPServerActor.prototype.handlerMethod = async function (req: any, res: any) {
+      const { actorTypeName, actorId, methodName } = req.params;
+      const body = req.body;
+
+      const dataSerialized = this.serializer.serialize(body);
+      try {
+        const result = await ActorRuntime.getInstance(this.client.daprClient).invoke(
+          actorTypeName,
+          actorId,
+          methodName,
+          dataSerialized,
+        );
+        res.statusCode = HttpStatusCode.OK;
+        return this.handleResult(res, result);
+      } catch (error) {
+        if (error instanceof SerializableError) {
+          // The serializable error should contain the status code or default to 400
+          error.statusCode = error.statusCode ?? HttpStatusCode.BAD_REQUEST;
+        } else if (error instanceof Error) {
+          res.statusCode = HttpStatusCode.INTERNAL_SERVER_ERROR;
+        }
+        return this.handleResult(res, error);
+      }
+    };
+  }
+
+  private patchDeactivate(options: DaprModuleOptions) {
+    // Prevent deactivate from throwing an unhandled exception when the actor is not known to this server
+    const isLoggingEnabled = options?.logging?.enabled ?? true;
+
+    const originalDeactivateActor = ActorManager.prototype.deactivateActor;
+    if (!originalDeactivateActor) return;
+
+    ActorManager.prototype.deactivateActor = async function (actorId: ActorId) {
+      try {
+        // If the actor is not known to this server then just return without error
+        // There is no need to throw an error here
+        if (!this.actors.has(actorId.getId())) {
+          return;
+        }
+        await originalDeactivateActor.bind(this)(actorId);
+
+        if (isLoggingEnabled) {
+          const actorTypeName = this.actorCls.name;
+          Logger.verbose(`Deactivating actor ${actorId}`, actorTypeName);
+        }
+      } catch (error) {
+        Logger.error(`Error deactivating actor ${actorId}`);
+        Logger.error(error);
+        if (error.stack) {
+          Logger.error(error.stack);
+        }
       }
     };
   }

@@ -1,6 +1,7 @@
 import { ActorRuntimeService } from './actors/actor-runtime.service';
 import { DaprClientCache } from './actors/client-cache';
 import { DaprActorClient } from './actors/dapr-actor-client.service';
+import { SerializableError } from './actors/serializable-error';
 import { StatefulActorOf } from './actors/stateful-actor-of';
 import { IState, StatefulActor } from './actors/stateful.actor';
 import {
@@ -45,4 +46,5 @@ export {
   StatefulActor,
   StatefulActorOf,
   IState,
+  SerializableError,
 };
