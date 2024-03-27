@@ -83,7 +83,7 @@ export class NestActorManager {
         method: 'POST', // we always use POST calls for Invoking (ref: https://github.com/dapr/js-sdk/pull/137#discussion_r772636068)
         body,
         headers: {
-          'Dapr-Reentrancy-Id': reentrancyId,
+          'Dapr-Reentrancy-Id': reentrancyId ?? randomUUID(),
         },
       });
       return result as object;
